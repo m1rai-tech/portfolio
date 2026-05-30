@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
   # Single-page portfolio website
 
@@ -9,3 +10,6 @@
 
   Run `npm run dev` to start the development server.
   
+=======
+# portfolio
+>>>>>>> 6719ab306cfa851b56a19bf031f28c881442725a
