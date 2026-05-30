@@ -6,7 +6,6 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite"
-  "homepage": "https://m1rai-tech.github.io/portfolio"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
