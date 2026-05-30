@@ -42,19 +42,6 @@ export const works: Work[] = [
     link: "https://github.com/m1rai-tech/web-2.0",
   },
   {
-    id: "nova-bot",
-    title: "Nova — AI Chat",
-    year: "2026",
-    category: "Web",
-    blurb: "свій AI-чат з streaming, markdown і бічною панеллю.",
-    description:
-      "Односторінковий AI-чат на чистому React без збірника. Gemini API зі streaming — відповідь з'являється в реальному часі. Markdown-рендеринг: жирний, курсив, заголовки, списки, блоки коду з кнопкою копіювання. Бічна панель з історією чатів, темна/світла тема, скасування запиту.",
-    coverImage: `${b}Project_4.jpg`,
-    images: [`${b}Project_4.jpg`],
-    stack: ["React", "Tailwind", "Gemini API"],
-    link: "https://m1rai-tech.github.io/nova-bot/",
-  },
-  {
     id: "santexnik-landing",
     title: "Сантехнік Микола",
     year: "2025",

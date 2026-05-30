@@ -27,9 +27,13 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      // Alias @ to the src directory
+      'framer-motion': path.resolve(__dirname, 'node_modules/framer-motion/dist/cjs/index.js'),
       '@': path.resolve(__dirname, './src'),
     },
+  },
+
+  optimizeDeps: {
+    include: ['framer-motion'],
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
