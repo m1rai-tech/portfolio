@@ -80,4 +80,17 @@ export const works: Work[] = [
     stack: ["HTML", "CSS", "JavaScript"],
     link: "https://m1rai-tech.github.io/demo3/",
   },
+  {
+    id: "rivnovaha-yoga",
+    title: "Рівновага — Йога-студія",
+    year: "2025",
+    category: "Web",
+    blurb: "демо. split-hero, day-picker, organic design. зовсім не як інші.",
+    description:
+      "Демо-проект: редизайн лендінгу для йога-студії у Хмельницькому. Split-hero з organic blob-рамкою для фото, grain texture overlay, анімований marquee, day-picker для розкладу занять, tab-switcher для команди інструкторів, auto-scroll відгуки. Lora + Raleway, зелена палітра. Чистий HTML/CSS/JS + Leaflet.",
+    coverImage: `${b}Project_5.jpg`,
+    images: [`${b}Project_5.jpg`],
+    stack: ["HTML", "CSS", "JavaScript", "Leaflet"],
+    link: "https://m1rai-tech.github.io/demo4/",
+  },
 ];
