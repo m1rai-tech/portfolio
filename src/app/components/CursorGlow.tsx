@@ -53,33 +53,34 @@ export function CursorGlow() {
 
   return (
     <>
+      {/* blob stays strictly behind all page content */}
       <div
         ref={blobRef}
-        className="pointer-events-none fixed left-0 top-0 z-[5] h-[320px] w-[320px] rounded-full"
+        className="pointer-events-none fixed left-0 top-0 z-[1] h-[320px] w-[320px] rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(59,130,246,0.10) 0%, rgba(6,182,212,0.04) 40%, transparent 70%)",
+            "radial-gradient(circle, rgba(59,130,246,0.08) 0%, rgba(6,182,212,0.03) 40%, transparent 70%)",
           willChange: "transform",
         }}
       />
+      {/* ring and dot on top of everything for cursor visibility */}
       <div
         ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[100] rounded-full border transition-[width,height,border-color,background-color] duration-300 ease-out"
+        className="pointer-events-none fixed left-0 top-0 z-[200] rounded-full border transition-[width,height,border-color] duration-300 ease-out"
         style={{
-          width: hover ? 48 : 32,
-          height: hover ? 48 : 32,
-          marginLeft: hover ? -8 : 0,
-          marginTop: hover ? -8 : 0,
-          borderColor: hover ? "rgba(34,211,238,0.9)" : "rgba(148,163,184,0.5)",
-          background: hover ? "rgba(34,211,238,0.08)" : "transparent",
-          boxShadow: hover ? "0 0 24px rgba(34,211,238,0.35)" : "none",
+          width: hover ? 44 : 30,
+          height: hover ? 44 : 30,
+          marginLeft: hover ? -7 : 0,
+          marginTop: hover ? -7 : 0,
+          borderColor: hover ? "rgba(34,211,238,0.7)" : "rgba(148,163,184,0.4)",
+          background: hover ? "rgba(34,211,238,0.05)" : "transparent",
           willChange: "transform, width, height",
         }}
       />
       <div
         ref={dotRef}
-        className="pointer-events-none fixed left-0 top-0 z-[101] h-1.5 w-1.5 rounded-full bg-cyan-300"
-        style={{ willChange: "transform", boxShadow: "0 0 10px rgba(34,211,238,0.8)" }}
+        className="pointer-events-none fixed left-0 top-0 z-[201] h-1.5 w-1.5 rounded-full bg-slate-300"
+        style={{ willChange: "transform" }}
       />
     </>
   );

@@ -32,13 +32,13 @@ export default function App() {
   return (
     <div
       className="relative min-h-screen overflow-x-hidden bg-[#0a0e1a] text-slate-200 antialiased"
-      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+      style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
     >
       <style>{`
         html { scroll-behavior: smooth; }
         body { background:#0a0e1a; }
         @media (pointer: fine) { body, a, button, input, textarea, label { cursor: none; } }
-        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+        .font-display { font-family: 'Outfit', system-ui, sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
         ::selection { background: rgba(34,211,238,0.3); color: #e2f5ff; }
         ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -90,9 +90,13 @@ export default function App() {
       <Nav />
       <main className="relative z-10">
         <Hero />
+        <div className="mx-auto max-w-7xl px-6"><div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" /></div>
         <About />
+        <div className="mx-auto max-w-7xl px-6"><div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" /></div>
         <Stack />
+        <div className="mx-auto max-w-7xl px-6"><div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" /></div>
         <Works />
+        <div className="mx-auto max-w-7xl px-6"><div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" /></div>
         <Contact />
       </main>
       <Footer />

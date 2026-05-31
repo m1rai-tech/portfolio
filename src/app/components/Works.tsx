@@ -29,10 +29,10 @@ export function Works() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`rounded-full border px-5 py-2 font-mono text-sm transition-all duration-300 ${
+              className={`rounded-full border px-5 py-2 font-mono text-sm transition-all duration-200 ${
                 filter === f
-                  ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
-                  : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/30 hover:text-slate-200"
+                  ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-200"
+                  : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/25 hover:text-slate-200"
               }`}
             >
               {f}
@@ -55,7 +55,7 @@ export function Works() {
               <TiltCard
                 onClick={() => setActive(w)}
                 max={5}
-                className="group relative h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] text-left hover:border-cyan-400/40 hover:shadow-[0_20px_60px_-10px_rgba(34,211,238,0.2)]"
+                className="group relative h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] text-left hover:border-white/20 hover:bg-white/[0.035]"
               >
                 <div
                   className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
@@ -80,11 +80,12 @@ export function Works() {
                     {w.year} · {w.category}
                   </p>
                   <h3
-                    className="font-display mt-2 tracking-tight text-slate-100 transition-colors group-hover:text-cyan-200"
-                    style={{ fontSize: "1.25rem", fontWeight: 500 }}
+                    className="mt-2 text-slate-100 transition-colors group-hover:text-slate-50"
+                    style={{ fontSize: "1.1rem", fontWeight: 400 }}
                   >
                     {w.title}
                   </h3>
+                  <p className="mt-1 font-mono text-xs text-slate-600 line-clamp-1">{w.blurb}</p>
                 </div>
               </TiltCard>
             </motion.div>
@@ -118,7 +119,7 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-slate-300 backdrop-blur transition-all hover:border-cyan-400/60 hover:text-cyan-200"
+          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-slate-300 backdrop-blur transition-all hover:border-white/25 hover:text-slate-100"
           aria-label="Close"
         >
           <X size={18} />
@@ -136,8 +137,8 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
             {work.year} · {work.category}
           </p>
           <h3
-            className="font-display mt-2 tracking-tight text-slate-100"
-            style={{ fontSize: "clamp(1.6rem, 3vw, 2.4rem)", fontWeight: 600 }}
+            className="mt-2 text-slate-100"
+            style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)", fontWeight: 500 }}
           >
             {work.title}
           </h3>
@@ -171,7 +172,7 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
             href={work.link}
             target="_blank"
             rel="noreferrer"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-6 py-3 font-mono text-sm text-slate-950 transition-all hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-6 py-3 font-mono text-sm text-slate-950 transition-opacity hover:opacity-90"
           >
             Відкрити проєкт <ArrowUpRight size={16} />
           </a>

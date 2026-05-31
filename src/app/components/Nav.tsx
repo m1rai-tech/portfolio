@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 const links = [
   { id: "about", label: "About" },
@@ -35,6 +35,12 @@ export function Nav() {
     return () => window.removeEventListener("scroll", trackActive);
   }, []);
 
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   return (
     <>
       <header
@@ -53,41 +59,60 @@ export function Nav() {
             <span className="text-cyan-400">●</span> akirasata
           </a>
 
-          <a
-            href="#contact"
-            className="hidden md:inline-flex rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 font-mono text-sm text-cyan-200 transition-all hover:border-cyan-300 hover:bg-cyan-400/20 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)]"
-          >
-            Hire me
-          </a>
-
           <button
-            className="md:hidden text-slate-300"
+            className="md:hidden text-slate-300 p-2 -mr-2"
             onClick={() => setOpen((o) => !o)}
-            aria-label="Menu"
+            aria-label={open ? "Закрити меню" : "Відкрити меню"}
           >
-            <div className="space-y-1.5">
-              <span className={`block h-px w-6 bg-current transition-transform ${open ? "translate-y-[6px] rotate-45" : ""}`} />
-              <span className={`block h-px w-6 bg-current transition-opacity ${open ? "opacity-0" : ""}`} />
-              <span className={`block h-px w-6 bg-current transition-transform ${open ? "-translate-y-[6px] -rotate-45" : ""}`} />
+            <div className="space-y-1.5 w-6">
+              <span className={`block h-px w-6 bg-current transition-transform duration-300 ${open ? "translate-y-[6px] rotate-45" : ""}`} />
+              <span className={`block h-px bg-current transition-all duration-300 ${open ? "w-0 opacity-0" : "w-6 opacity-100"}`} />
+              <span className={`block h-px w-6 bg-current transition-transform duration-300 ${open ? "-translate-y-[6px] -rotate-45" : ""}`} />
             </div>
           </button>
         </div>
 
-        {open && (
-          <nav className="md:hidden mx-6 mt-3 rounded-2xl border border-white/10 bg-[#0a0e1a]/95 p-4 backdrop-blur-xl">
-            {links.map((l) => (
-              <a
-                key={l.id}
-                href={`#${l.id}`}
-                onClick={() => setOpen(false)}
-                className="block py-2 font-mono text-sm text-slate-300 hover:text-cyan-300"
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-        )}
+        <AnimatePresence>
+          {open && (
+            <motion.nav
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="md:hidden mx-6 mt-3 rounded-2xl border border-white/10 bg-[#0a0e1a]/98 p-2 backdrop-blur-xl"
+            >
+              {links.map((l, i) => (
+                <motion.a
+                  key={l.id}
+                  href={`#${l.id}`}
+                  onClick={() => setOpen(false)}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.2 }}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 font-mono text-sm text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-slate-100"
+                >
+                  <span className="font-mono text-[10px] text-slate-600 w-4">{String(i + 1).padStart(2, "0")}</span>
+                  {l.label}
+                </motion.a>
+              ))}
+            </motion.nav>
+          )}
+        </AnimatePresence>
       </header>
+
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-[#0a0e1a]/60 backdrop-blur-sm md:hidden"
+            onClick={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Side nav — desktop only */}
       <nav className="hidden md:flex fixed left-7 top-1/2 -translate-y-1/2 z-50 flex-col items-start gap-1">
@@ -109,21 +134,18 @@ export function Nav() {
               )}
               <span
                 className={`relative flex h-2 w-2 items-center justify-center rounded-full transition-all duration-300 ${
-                  isActive
-                    ? "bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.85)]"
-                    : "bg-slate-600 group-hover:bg-slate-400"
+                  isActive ? "bg-cyan-400" : "bg-slate-600 group-hover:bg-slate-400"
                 }`}
               />
-              <motion.span
-                animate={{
-                  opacity: isActive ? 1 : 0,
-                  x: isActive ? 0 : -6,
-                }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="relative font-mono text-xs text-cyan-300 pointer-events-none select-none"
-              >
-                {l.label}
-              </motion.span>
+              <span className="hidden lg:block overflow-hidden">
+                <motion.span
+                  animate={{ opacity: isActive ? 1 : 0, x: isActive ? 0 : -6 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative font-mono text-xs text-cyan-300 pointer-events-none select-none"
+                >
+                  {l.label}
+                </motion.span>
+              </span>
             </a>
           );
         })}
