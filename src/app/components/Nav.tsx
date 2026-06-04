@@ -44,11 +44,10 @@ export function Nav() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? "border-b border-white/5 bg-[#0a0e1a]/80 py-3 backdrop-blur-xl"
-            : "py-5"
-        }`}
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled
+          ? "border-b border-white/5 bg-[#0a0e1a]/80 py-3 backdrop-blur-xl"
+          : "py-5"
+          }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6">
           <a
@@ -75,23 +74,106 @@ export function Nav() {
         <AnimatePresence>
           {open && (
             <motion.nav
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              initial={{
+                opacity: 0,
+                scale: 0.92,
+                y: -20,
+              }}
+
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+              }}
+
+              exit={{
+                opacity: 0,
+                scale: 0.96,
+                y: -10,
+              }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="md:hidden mx-6 mt-3 rounded-2xl border border-white/10 bg-[#0a0e1a]/98 p-2 backdrop-blur-xl"
+              className="
+relative
+md:hidden
+mx-6
+mt-3
+overflow-hidden
+rounded-[28px]
+border border-white/15
+bg-slate-950/30
+p-2
+backdrop-blur-3xl
+shadow-[0_8px_40px_rgba(0,0,0,0.35)]
+"
+
             >
+              <div
+  className="absolute inset-0 pointer-events-none"
+  style={{
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.05), transparent)",
+  }}
+/>
+              <div
+                className="absolute inset-0 rounded-[28px] pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(255,255,255,0.12), transparent 30%, transparent 70%, rgba(255,255,255,0.08))",
+                }}
+              />
+
+              <div
+                className="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-cyan-400/10 blur-3xl pointer-events-none"
+              />
+              <div
+                className="absolute -top-10 left-0 h-24 w-full pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.18), transparent)",
+                }}
+              />
               {links.map((l, i) => (
                 <motion.a
                   key={l.id}
                   href={`#${l.id}`}
+                  whileHover={{
+                    scale: 1.02,
+                  }}
                   onClick={() => setOpen(false)}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.2 }}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 font-mono text-sm text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-slate-100"
+                  className="
+group
+relative
+flex
+items-center
+gap-3
+rounded-2xl
+px-4
+py-3
+text-slate-200
+transition-all
+duration-300
+hover:bg-white/[0.08]
+hover:shadow-[0_0_20px_rgba(34,211,238,0.08)]
+hover:backdrop-blur-xl
+hover:translate-x-1
+"
                 >
-                  <span className="font-mono text-[10px] text-slate-600 w-4">{String(i + 1).padStart(2, "0")}</span>
+                  <div
+                    className="
+  h-5
+  w-[2px]
+  rounded-full
+  bg-cyan-400
+  opacity-0
+  transition-opacity
+  duration-300
+  group-hover:opacity-100
+  "
+                  />
+                  <span className="font-mono text-[10px] text-cyan-300/80 w-5">{String(i + 1).padStart(2, "0")}</span>
                   {l.label}
                 </motion.a>
               ))}
@@ -108,7 +190,14 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-[#0a0e1a]/60 backdrop-blur-sm md:hidden"
+            className="
+fixed
+inset-0
+z-40
+bg-black/30
+backdrop-blur-xl
+md:hidden
+"
             onClick={() => setOpen(false)}
           />
         )}
@@ -133,9 +222,8 @@ export function Nav() {
                 />
               )}
               <span
-                className={`relative flex h-2 w-2 items-center justify-center rounded-full transition-all duration-300 ${
-                  isActive ? "bg-cyan-400" : "bg-slate-600 group-hover:bg-slate-400"
-                }`}
+                className={`relative flex h-2 w-2 items-center justify-center rounded-full transition-all duration-300 ${isActive ? "bg-cyan-400" : "bg-slate-600 group-hover:bg-slate-400"
+                  }`}
               />
               <span className="hidden lg:block overflow-hidden">
                 <motion.span

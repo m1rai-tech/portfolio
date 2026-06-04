@@ -4,7 +4,7 @@ import { SectionTitle } from "./SectionTitle";
 
 const stats = [
   { label: "Вік", value: "19 років" },
-  { label: "Освіта", value: "IT Step" },
+  { label: "Стек", value: "React TS" },
   { label: "Досвід", value: "~1 рік" },
   { label: "Напрямок", value: "AI Eng." },
 ];
@@ -20,22 +20,31 @@ export function About() {
     <section id="about" className="relative mx-auto max-w-7xl px-6 py-28">
       <SectionTitle num="01" label="About" title="Про мене." />
 
-      <div className="grid items-start gap-12 md:grid-cols-[220px_1fr]">
+      <div className="grid items-start gap-16 md:grid-cols-[280px_1fr]">
         <Reveal>
-          <div className="relative mx-auto h-52 w-52 md:mx-0">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-400/10 blur-2xl" />
-            <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-[#0a0e1a]">
-              <div className="absolute inset-0 opacity-20"
-                style={{
-                  backgroundImage: "radial-gradient(circle at 30% 70%, rgba(59,130,246,0.4) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(6,182,212,0.3) 0%, transparent 50%)",
-                }}
-              />
-              <span
-                className="relative font-display select-none"
-                style={{ fontSize: "3.5rem", fontWeight: 600, letterSpacing: "-0.04em", color: "rgba(226,232,240,0.85)" }}
-              >
-                a.s
-              </span>
+          <div className="mx-auto flex flex-col items-center md:mx-0">
+            <div className="relative h-64 w-64">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-400/10 blur-2xl" />
+
+              <div className="relative h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+                <img
+                  src={`${import.meta.env.BASE_URL}About.jpg`}
+                  alt="Сторожук Данило"
+                  className="h-full w-full object-cover"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              </div>
+            </div>
+
+            <div className="mt-4 text-center">
+              <h3 className="text-xl font-semibold tracking-tight text-slate-100">
+                Сторожук Данило
+              </h3>
+
+              <p className="mt-1 font-mono text-xs uppercase tracking-[0.25em] text-cyan-400">
+                AI Engineer • Frontend Developer
+              </p>
             </div>
           </div>
         </Reveal>
@@ -43,10 +52,17 @@ export function About() {
         <div className="md:pt-1 space-y-8">
           <Reveal delay={0.1}>
             <div className="space-y-3 max-w-xl">
-              <p className="text-lg leading-relaxed text-slate-300">
-                19 років. Закінчив IT Step, але більше навчився сам —
-                з малечку цікавився технологіями, від ігор до коду.
+              <p className="text-xl leading-relaxed text-slate-200">
+                Привіт, я <span className="font-semibold text-cyan-400">Сторожук Данило</span>.
+                Розробник, який захоплюється створенням сучасних веб-додатків,
+                десктопних рішень та AI-продуктів.
               </p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1">
+                <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-xs font-medium text-cyan-300">
+                  Відкритий до нових проектів
+                </span>
+              </div>
               <p className="text-base leading-relaxed text-slate-400">
                 Зараз пишу на React + TypeScript, активно займаюсь Electron,
                 і рухаюсь у бік AI Engineering. Працював над реальними проектами
