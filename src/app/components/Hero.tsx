@@ -120,8 +120,8 @@ export function Hero() {
               transition={{ duration: 0.7, delay: 0.5 }}
               className="mt-6 max-w-lg text-base text-slate-400 md:text-lg leading-relaxed"
             >
-              Пишу на React, збираю Electron-апки, часом щось з AI.
-              Якщо є задача — розберусь і зроблю.
+              Будую веб і десктоп через vibe coding та prompt engineering.
+              Є задача — розберусь і зроблю.
               <span className="block mt-1 font-mono text-sm text-slate-600">
                 React · Next.js · Electron · TypeScript
               </span>
@@ -174,14 +174,7 @@ export function Hero() {
         transition={{ delay: 1.4, duration: 1 }}
         className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2"
       >
-        <div className="flex flex-col items-center gap-2 font-mono text-xs text-slate-500">
-          <span>scroll</span>
-          <motion.span
-            animate={{ y: [0, 8, 0] }}
-            transition={{ repeat: Infinity, duration: 1.8 }}
-            className="block h-8 w-px bg-gradient-to-b from-slate-500 to-transparent"
-          />
-        </div>
+        
       </motion.div>
     </section>
   );

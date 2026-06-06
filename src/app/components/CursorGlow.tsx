@@ -53,7 +53,6 @@ export function CursorGlow() {
 
   return (
     <>
-      {/* blob stays strictly behind all page content */}
       <div
         ref={blobRef}
         className="pointer-events-none fixed left-0 top-0 z-[1] h-[320px] w-[320px] rounded-full"
@@ -63,10 +62,9 @@ export function CursorGlow() {
           willChange: "transform",
         }}
       />
-      {/* ring and dot on top of everything for cursor visibility */}
       <div
         ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[200] rounded-full border transition-[width,height,border-color] duration-300 ease-out"
+        className="pointer-events-none fixed left-0 top-0 z-[9998] rounded-full border transition-[width,height,border-color] duration-300 ease-out"
         style={{
           width: hover ? 44 : 30,
           height: hover ? 44 : 30,
@@ -79,7 +77,7 @@ export function CursorGlow() {
       />
       <div
         ref={dotRef}
-        className="pointer-events-none fixed left-0 top-0 z-[201] h-1.5 w-1.5 rounded-full bg-slate-300"
+        className="pointer-events-none fixed left-0 top-0 z-[9999] h-1.5 w-1.5 rounded-full bg-slate-300"
         style={{ willChange: "transform" }}
       />
     </>

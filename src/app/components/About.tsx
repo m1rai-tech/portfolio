@@ -10,9 +10,21 @@ const stats = [
 ];
 
 const traits = [
-  { icon: CheckCircle, title: "Чіткий план", desc: "Перед стартом фіксуємо задачу, строки і очікування" },
-  { icon: MessageCircle, title: "Консультація", desc: "Постійно в діалозі — розберу будь-яку задачу разом з тобою" },
-  { icon: Sparkles, title: "Відкритий", desc: "Цікавлять будь-які проекти — від лендінгу до AI-продукту" },
+  {
+    icon: CheckCircle,
+    title: "Vibe Coding",
+    desc: "Будую сайти та додатки через AI-асистовану розробку — швидко, чисто, з повним контролем результату",
+  },
+  {
+    icon: MessageCircle,
+    title: "Prompt Engineering",
+    desc: "Пишу чіткі промти та покращую AI-workflow — менше шуму, більше точних результатів",
+  },
+  {
+    icon: Sparkles,
+    title: "AI-first підхід",
+    desc: "Шукаю діри в AI-пайплайнах і закриваю їх — безпека, логіка, стабільність",
+  },
 ];
 
 export function About() {
@@ -25,14 +37,12 @@ export function About() {
           <div className="mx-auto flex flex-col items-center md:mx-0">
             <div className="relative h-64 w-64">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-400/10 blur-2xl" />
-
               <div className="relative h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
                 <img
                   src={`${import.meta.env.BASE_URL}About.jpg`}
                   alt="Сторожук Данило"
                   className="h-full w-full object-cover"
                 />
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
               </div>
             </div>
@@ -41,7 +51,6 @@ export function About() {
               <h3 className="text-xl font-semibold tracking-tight text-slate-100">
                 Сторожук Данило
               </h3>
-
               <p className="mt-1 font-mono text-xs uppercase tracking-[0.25em] text-cyan-400">
                 AI Engineer • Frontend Developer
               </p>
@@ -53,9 +62,10 @@ export function About() {
           <Reveal delay={0.1}>
             <div className="space-y-3 max-w-xl">
               <p className="text-xl leading-relaxed text-slate-200">
-                Привіт, я <span className="font-semibold text-cyan-400">Сторожук Данило</span>.
-                Розробник, який захоплюється створенням сучасних веб-додатків,
-                десктопних рішень та AI-продуктів.
+                Привіт, я{" "}
+                <span className="font-semibold text-cyan-400">Данило</span>.
+                Створюю веб-сайти та веб-додатки через vib  e coding і prompt engineering —
+                від ідеї до продакшену через чітку роботу з AI.
               </p>
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1">
                 <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -64,9 +74,9 @@ export function About() {
                 </span>
               </div>
               <p className="text-base leading-relaxed text-slate-400">
-                Зараз пишу на React + TypeScript, активно займаюсь Electron,
-                і рухаюсь у бік AI Engineering. Працював над реальними проектами
-                з Supabase, Vercel, Stripe — не тільки читав доку, а й застосовував.
+                Пишу на React + TypeScript, працюю з Electron і рухаюсь у бік AI Engineering.
+                Моя фішка — чіткі промти, покращення AI-workflow і закриття дір у роботі з моделями.
+                Реальний досвід із Supabase, Vercel, Stripe.
               </p>
             </div>
           </Reveal>
