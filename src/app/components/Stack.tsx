@@ -24,6 +24,7 @@ const categories = [
   {
     label: "Інструменти",
     items: [
+      { name: "Figma", note: "макети, UI" },
       { name: "Electron", note: "десктоп-апки" },
       { name: "Vercel", note: "деплой" },
       { name: "Git / GitHub", note: "версії" },

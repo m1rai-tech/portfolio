@@ -120,8 +120,8 @@ export function Hero() {
               transition={{ duration: 0.7, delay: 0.5 }}
               className="mt-6 max-w-lg text-base text-slate-400 md:text-lg leading-relaxed"
             >
-              Будую веб і десктоп через vibe coding та prompt engineering.
-              Є задача — розберусь і зроблю.
+              AI Web Engineer — від простого лендінгу
+              до складного продакшену. Лендінг, SPA, повноцінний продукт.
               <span className="block mt-1 font-mono text-sm text-slate-600">
                 React · Next.js · Electron · TypeScript
               </span>
@@ -174,7 +174,7 @@ export function Hero() {
         transition={{ delay: 1.4, duration: 1 }}
         className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2"
       >
-        
+
       </motion.div>
     </section>
   );

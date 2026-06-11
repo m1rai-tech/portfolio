@@ -13,17 +13,17 @@ const traits = [
   {
     icon: CheckCircle,
     title: "Vibe Coding",
-    desc: "Будую сайти та додатки через AI-асистовану розробку — швидко, чисто, з повним контролем результату",
+    desc: "Будую сайти і додатки через AI-асистовану розробку швидко виходжу на робочий результат без зайвого overhead.",
   },
   {
     icon: MessageCircle,
     title: "Prompt Engineering",
-    desc: "Пишу чіткі промти та покращую AI-workflow — менше шуму, більше точних результатів",
+    desc: "Пишу промти які дають передбачуваний результат. Менше ітерацій — більше точності з першого разу.",
   },
   {
     icon: Sparkles,
-    title: "AI-first підхід",
-    desc: "Шукаю діри в AI-пайплайнах і закриваю їх — безпека, логіка, стабільність",
+    title: "Full Cycle",
+    desc: "Беру задачу від нуля і доводжу до кінця дизайн, код, деплой, інтеграції.",
   },
 ];
 
@@ -64,8 +64,9 @@ export function About() {
               <p className="text-xl leading-relaxed text-slate-200">
                 Привіт, я{" "}
                 <span className="font-semibold text-cyan-400">Данило</span>.
-                Створюю веб-сайти та веб-додатки через vib  e coding і prompt engineering —
-                від ідеї до продакшену через чітку роботу з AI.
+                Будую веб-продукти —
+                від лендінгу до повноцінного SaaS — через AI-асистовану
+                розробку і точну роботу з інструментами.
               </p>
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1">
                 <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -74,9 +75,10 @@ export function About() {
                 </span>
               </div>
               <p className="text-base leading-relaxed text-slate-400">
-                Пишу на React + TypeScript, працюю з Electron і рухаюсь у бік AI Engineering.
-                Моя фішка — чіткі промти, покращення AI-workflow і закриття дір у роботі з моделями.
-                Реальний досвід із Supabase, Vercel, Stripe.
+                Пишу на React + TypeScript, збираю десктоп через Electron,
+                верстаю по макетах з Figma. Працюю з Supabase, Vercel, Stripe.
+                Фокус — AI Engineering: чіткі промти, стабільні пайплайни,
+                менше шуму в результаті
               </p>
             </div>
           </Reveal>

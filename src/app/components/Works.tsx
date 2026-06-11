@@ -94,6 +94,28 @@ export function Works() {
         </AnimatePresence>
       </motion.div>
 
+      <Reveal delay={0.2}>
+        <div className="mt-10 flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.015] px-6 py-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10">
+            <span className="font-mono text-sm font-semibold text-cyan-400">10+</span>
+          </div>
+          <div>
+            <p className="text-sm text-slate-200">Дрібні проекти, експерименти та демо</p>
+            <p className="mt-0.5 font-mono text-xs text-slate-600">
+              лендінги, утиліти, UI-компоненти — не всі варті окремої картки
+            </p>
+          </div>
+          <a
+            href="https://github.com/m1rai-tech"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 font-mono text-xs text-slate-400 transition-colors hover:border-white/25 hover:text-slate-200"
+          >
+            GitHub <ArrowUpRight size={13} />
+          </a>
+        </div>
+      </Reveal>
+
       <AnimatePresence>
         {active && <WorkModal work={active} onClose={() => setActive(null)} />}
       </AnimatePresence>
@@ -152,7 +174,6 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
           onClick={(e) => e.stopPropagation()}
           className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-[#0a0e1a] shadow-[0_30px_80px_rgba(0,0,0,0.6)] flex flex-col max-h-[90vh]"
         >
-          {/* Close button — outside scroll area, always visible */}
           <button
             onClick={onClose}
             className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-slate-300 backdrop-blur-sm transition-all hover:border-white/30 hover:text-white"
@@ -161,91 +182,86 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
             <X size={18} />
           </button>
 
-          {/* Scrollable content */}
           <div className="overflow-y-auto flex-1 rounded-2xl">
-
-          {/* Hero image — clickable */}
-          <button
-            className="relative block w-full aspect-[16/9] overflow-hidden group/hero cursor-zoom-in"
-            onClick={() => openLightbox(0)}
-          >
-            <ImageWithFallback
-              src={allImages[0]}
-              alt={work.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover/hero:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e1a] to-transparent" />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-opacity duration-300">
-              <div className="rounded-full border border-white/20 bg-black/50 px-4 py-2 font-mono text-xs text-slate-300 backdrop-blur">
-                Відкрити фото
-              </div>
-            </div>
-          </button>
-
-          <div className="p-8 md:p-10">
-            <p className="font-mono text-xs uppercase tracking-widest text-cyan-400/80">
-              {work.year} · {work.category}
-            </p>
-            <h3
-              className="mt-2 text-slate-100"
-              style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)", fontWeight: 500 }}
+            <button
+              className="relative block w-full aspect-[16/9] overflow-hidden group/hero cursor-zoom-in"
+              onClick={() => openLightbox(0)}
             >
-              {work.title}
-            </h3>
-            <p className="mt-5 text-slate-300 leading-relaxed">{work.description}</p>
+              <ImageWithFallback
+                src={allImages[0]}
+                alt={work.title}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover/hero:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e1a] to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-opacity duration-300">
+                <div className="rounded-full border border-white/20 bg-black/50 px-4 py-2 font-mono text-xs text-slate-300 backdrop-blur">
+                  Відкрити фото
+                </div>
+              </div>
+            </button>
 
-            {/* Gallery grid — all extra images clickable */}
-            {allImages.length > 1 && (
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {allImages.slice(1).map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => openLightbox(i + 1)}
-                    className="group/thumb relative overflow-hidden rounded-xl border border-white/10 cursor-zoom-in"
-                  >
-                    <ImageWithFallback
-                      src={img}
-                      alt={`${work.title} ${i + 2}`}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover/thumb:scale-105"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/30 transition-colors duration-300">
-                      <div className="opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 font-mono text-xs text-slate-300 backdrop-blur">
-                        Відкрити
+            <div className="p-8 md:p-10">
+              <p className="font-mono text-xs uppercase tracking-widest text-cyan-400/80">
+                {work.year} · {work.category}
+              </p>
+              <h3
+                className="mt-2 text-slate-100"
+                style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)", fontWeight: 500 }}
+              >
+                {work.title}
+              </h3>
+              <p className="mt-5 text-slate-300 leading-relaxed">{work.description}</p>
+
+              {allImages.length > 1 && (
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {allImages.slice(1).map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => openLightbox(i + 1)}
+                      className="group/thumb relative overflow-hidden rounded-xl border border-white/10 cursor-zoom-in"
+                    >
+                      <ImageWithFallback
+                        src={img}
+                        alt={`${work.title} ${i + 2}`}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover/thumb:scale-105"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/30 transition-colors duration-300">
+                        <div className="opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 font-mono text-xs text-slate-300 backdrop-blur">
+                          Відкрити
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            <div className="mt-8">
-              <p className="font-mono text-xs uppercase tracking-widest text-slate-500">Stack</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {work.stack.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 font-mono text-xs text-cyan-200"
-                  >
-                    {s}
-                  </span>
-                ))}
+              <div className="mt-8">
+                <p className="font-mono text-xs uppercase tracking-widest text-slate-500">Stack</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {work.stack.map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 font-mono text-xs text-cyan-200"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
               </div>
+
+              <a
+                href={work.link}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-6 py-3 font-mono text-sm text-slate-950 transition-opacity hover:opacity-90"
+              >
+                Відкрити проєкт <ArrowUpRight size={16} />
+              </a>
             </div>
-
-            <a
-              href={work.link}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-6 py-3 font-mono text-sm text-slate-950 transition-opacity hover:opacity-90"
-            >
-              Відкрити проєкт <ArrowUpRight size={16} />
-            </a>
           </div>
-          </div>{/* end scroll wrapper */}
         </motion.div>
       </motion.div>
 
-      {/* Lightbox — portal to body so stopPropagation on modal doesn't block it */}
       {createPortal(
         <AnimatePresence>
           {lightboxIndex !== null && (
@@ -269,7 +285,6 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
                 onClick={(e) => e.stopPropagation()}
               />
 
-              {/* Close */}
               <button
                 onClick={closeLightbox}
                 className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-slate-300 backdrop-blur transition-all hover:border-white/30 hover:text-white"
@@ -277,7 +292,6 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
                 <X size={18} />
               </button>
 
-              {/* Prev / Next */}
               {allImages.length > 1 && (
                 <>
                   <button
@@ -295,7 +309,6 @@ function WorkModal({ work, onClose }: { work: Work; onClose: () => void }) {
                 </>
               )}
 
-              {/* Counter */}
               <div className="absolute bottom-5 left-1/2 -translate-x-1/2 font-mono text-xs text-slate-500">
                 {lightboxIndex + 1} / {allImages.length}
               </div>
