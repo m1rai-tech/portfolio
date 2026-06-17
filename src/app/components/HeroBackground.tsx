@@ -31,25 +31,37 @@ export function HeroBackground() {
       twinkle: number;
       speed: number;
       pulse: number;
+      angle: number;
+      wanderFreq: number;
+      wanderPhase: number;
     };
 
     const isMobile = window.innerWidth < 768;
-    const count = isMobile ? 30 : 70;
+    const count = isMobile ? 42 : 95;
     // Pre-compute squared thresholds — avoids sqrt in hot loop
     const glowRadiusSq = (180 * dpr) * (180 * dpr);
-    const lineMaxSq = ((isMobile ? 90 : 140) * dpr) ** 2;
+    // Slightly larger connect radius → fewer lonely stars (free: O(n²) loop
+    // runs over all pairs regardless of this threshold)
+    const lineMaxSq = ((isMobile ? 100 : 155) * dpr) ** 2;
     const lineGlowRadiusSq = (220 * dpr) * (220 * dpr);
     const particleR = 1.6 * dpr;
 
-    const particles: Particle[] = Array.from({ length: count }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.3 * dpr,
-      vy: (Math.random() - 0.5) * 0.3 * dpr,
-      twinkle: Math.random() * Math.PI * 2,
-      speed: 0.0005 + Math.random() * 0.001,
-      pulse: Math.random() * Math.PI * 2,
-    }));
+    const particles: Particle[] = Array.from({ length: count }, () => {
+      const angle = Math.random() * Math.PI * 2;
+      const sp = (0.15 + Math.random() * 0.2) * dpr;
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: Math.cos(angle) * sp,
+        vy: Math.sin(angle) * sp,
+        twinkle: Math.random() * Math.PI * 2,
+        speed: 0.0005 + Math.random() * 0.001,
+        pulse: Math.random() * Math.PI * 2,
+        angle,
+        wanderFreq: 0.0002 + Math.random() * 0.0006,
+        wanderPhase: Math.random() * Math.PI * 2,
+      };
+    });
 
     const onMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -72,17 +84,84 @@ export function HeroBackground() {
       const my = mouse.current.y;
 
       // Fill background instead of clearRect (ctx alpha:false)
+      const cw = canvas.width;
+      const ch = canvas.height;
       ctx.fillStyle = "#0a0e1a";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, cw, ch);
+
+      // ── Ambient light/dark transitions: two big soft radial patches that
+      //    slowly roam the canvas — a lighter blue glow and an opposing dark
+      //    pool — giving the background drifting depth. ──
+      const maxDim = Math.max(cw, ch);
+      const lx = cw * (0.5 + Math.sin(time * 0.00005) * 0.38);
+      const ly = ch * (0.5 + Math.cos(time * 0.00007) * 0.38);
+      const lightGrad = ctx.createRadialGradient(lx, ly, 0, lx, ly, maxDim * 0.7);
+      lightGrad.addColorStop(0, "rgba(30,64,128,0.30)");
+      lightGrad.addColorStop(1, "rgba(10,14,26,0)");
+      ctx.fillStyle = lightGrad;
+      ctx.fillRect(0, 0, cw, ch);
+
+      const dx2 = cw * (0.5 - Math.sin(time * 0.00004) * 0.42);
+      const dy2 = ch * (0.5 - Math.cos(time * 0.00006) * 0.42);
+      const darkGrad = ctx.createRadialGradient(dx2, dy2, 0, dx2, dy2, maxDim * 0.6);
+      darkGrad.addColorStop(0, "rgba(2,4,12,0.45)");
+      darkGrad.addColorStop(1, "rgba(2,4,12,0)");
+      ctx.fillStyle = darkGrad;
+      ctx.fillRect(0, 0, cw, ch);
 
       const driftX = Math.sin(time * 0.0002) * 25 * dpr;
       const driftY = Math.cos(time * 0.00015) * 15 * dpr;
+
+      // ── Update positions via a slow "flow field": the heading depends on
+      //    a star's position + time, so neighbouring stars drift together
+      //    while distant regions flow in different directions — the whole
+      //    field gently streams and the constellations reshape. ──
+      const accel = 0.0012 * dpr;
+      const maxV = 0.045 * dpr;
+      const w = canvas.width;
+      const h = canvas.height;
+      const t = time * 0.000022;
+      // Low spatial frequency → smooth regional flow (independent of dpr)
+      const fx = 0.0011 / dpr;
+      const fy = 0.0011 / dpr;
+      for (const p of particles) {
+        // Field angle: varies across space and slowly over time
+        const field =
+          Math.sin(p.x * fx + t) +
+          Math.cos(p.y * fy - t * 0.8);
+        const a = field * Math.PI + p.wanderPhase * 0.4;
+
+        p.vx += Math.cos(a) * accel;
+        p.vy += Math.sin(a) * accel;
+
+        // Damp and clamp speed so the drift stays slow and weightless
+        p.vx *= 0.985;
+        p.vy *= 0.985;
+        const sp = Math.hypot(p.vx, p.vy);
+        if (sp > maxV) {
+          p.vx = (p.vx / sp) * maxV;
+          p.vy = (p.vy / sp) * maxV;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Soft bounce off edges so stars stay in view
+        if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); }
+        else if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
+        if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); }
+        else if (p.y > h) { p.y = h; p.vy = -Math.abs(p.vy); }
+      }
 
       ctx.save();
       ctx.translate(driftX, driftY);
 
       // ── Lines (O(n²) but cheap per-pair, no shadowBlur) ──
+      // Hoist invariants out of the hot loop (constant for the whole frame)
       ctx.shadowBlur = 0;
+      ctx.lineWidth = 1;
+      const lineMax = Math.sqrt(lineMaxSq);
+      const lineGlowR = 220 * dpr;
       for (let i = 0; i < particles.length; i++) {
         const a = particles[i];
         for (let j = i + 1; j < particles.length; j++) {
@@ -96,14 +175,12 @@ export function HeroBackground() {
           const cmy = (a.y + b.y) / 2 - my;
           const mdSq = cmx * cmx + cmy * cmy;
           const glow = mdSq < lineGlowRadiusSq
-            ? 1 + (1 - Math.sqrt(mdSq) / (220 * dpr)) * 3
+            ? 1 + (1 - Math.sqrt(mdSq) / lineGlowR) * 3
             : 1;
 
-          const lineMax = Math.sqrt(lineMaxSq);
           const alpha = (1 - Math.sqrt(dSq) / lineMax) * 0.2 * glow;
 
           ctx.strokeStyle = `rgba(59,130,246,${alpha.toFixed(3)})`;
-          ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
