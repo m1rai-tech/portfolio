@@ -2,3 +2,14 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+@theme {
+  --color-ink: #0b0a0c;
+  --color-ink-2: #151317;
+  --color-paper: #efe9df;
+  --color-ember: #ff5b24;
+  --color-dusk: #7a5cff;
+  --font-display: "Unbounded", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}

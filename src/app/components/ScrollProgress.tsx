@@ -1,13 +1,19 @@
-import { motion, useScroll, useSpring } from "motion/react";
+import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
 
 export function ScrollProgress() {
   const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 25, mass: 0.3 });
-
+  const reduced = useReducedMotion();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 180,
+    damping: 32,
+    restDelta: 0.001,
+  });
+  if (reduced) return null;
   return (
     <motion.div
+      aria-hidden="true"
       style={{ scaleX, transformOrigin: "0% 50%" }}
-      className="fixed inset-x-0 top-0 z-[120] h-[2px] bg-gradient-to-r from-blue-500 via-cyan-300 to-blue-500"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[2px] bg-ember"
     />
   );
 }
