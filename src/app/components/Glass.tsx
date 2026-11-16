@@ -296,7 +296,7 @@ function start() {
       | (typeof DeviceOrientationEvent & { requestPermission?: unknown })
       | undefined;
     const drift = () => {
-      if (!light.active) root.classList.add("glass-drift");
+      if (!light.active) root.classList.add("glass-touch");
     };
     if (Orientation && typeof Orientation.requestPermission !== "function") {
       const onOrient = (event: DeviceOrientationEvent) => {
@@ -309,7 +309,7 @@ function start() {
           light.active = true;
           light.x = light.tx;
           light.y = light.ty;
-          root.classList.remove("glass-drift");
+          root.classList.remove("glass-touch");
         }
         request();
       };
@@ -329,7 +329,7 @@ function start() {
     cancelAnimationFrame(frame);
     frame = 0;
     light.active = false;
-    root.classList.remove("glass-drift", "glass-lens");
+    root.classList.remove("glass-touch", "glass-lens");
   };
 }
 

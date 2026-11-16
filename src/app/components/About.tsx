@@ -1,14 +1,17 @@
-import { useRef } from "react";
+import { useRef, type PointerEvent } from "react";
 import {
   motion,
+  useMotionValue,
   useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
 } from "framer-motion";
 import { useLanguage } from "../context/LanguageContext";
 import { content } from "../data/content";
 import { Copy } from "./Copy";
 import { SectionTitle } from "./SectionTitle";
+import { useGlass } from "./Glass";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const highlights = ["react", "typescript", "electron"];
@@ -50,9 +53,10 @@ function Statement({ text, lang }: { text: string; lang: string }) {
   );
 }
 
-function Portrait({ alt }: { alt: string }) {
+function Monogram({ label }: { label: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  const glass = useGlass<HTMLDivElement>(false);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start end", "end start"],
@@ -61,29 +65,78 @@ function Portrait({ alt }: { alt: string }) {
     scrollYProgress,
     [0, 0.4],
     reduce
-      ? ["inset(0% 0% 0% 0%)", "inset(0% 0% 0% 0%)"]
-      : ["inset(45% 0% 45% 0%)", "inset(0% 0% 0% 0%)"],
+      ? ["inset(-8% -8% -8% -8%)", "inset(-8% -8% -8% -8%)"]
+      : ["inset(45% 0% 45% 0%)", "inset(-8% -8% -8% -8%)"],
   );
-  const scale = useTransform(scrollYProgress, [0, 1], [reduce ? 1 : 1.25, 1]);
-  const y = useTransform(
+  const lettersY = useTransform(
     scrollYProgress,
     [0, 1],
-    reduce ? ["0%", "0%"] : ["-8%", "8%"],
+    reduce ? ["0%", "0%"] : ["16%", "-16%"],
   );
+  const glowY = useTransform(
+    scrollYProgress,
+    [0, 1],
+    reduce ? ["0%", "0%"] : ["24%", "-24%"],
+  );
+  const tiltX = useMotionValue(0);
+  const tiltY = useMotionValue(0);
+  const rotateX = useSpring(tiltX, { stiffness: 160, damping: 18, mass: 0.6 });
+  const rotateY = useSpring(tiltY, { stiffness: 160, damping: 18, mass: 0.6 });
+
+  const onMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    tiltY.set(x * 12);
+    tiltX.set(-y * 12);
+  };
+  const onLeave = () => {
+    tiltX.set(0);
+    tiltY.set(0);
+  };
+
   return (
     <motion.div
       ref={ref}
-      style={{ clipPath }}
-      className="relative aspect-[4/5] w-full overflow-hidden rounded-[20px] bg-ink-2"
+      style={{ clipPath, perspective: 900 }}
+      className="relative"
     >
-      <motion.img
-        src={`${import.meta.env.BASE_URL}About.jpg`}
-        alt={alt}
-        width={640}
-        height={800}
-        style={{ scale, y }}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
+      <motion.div
+        ref={glass}
+        role="img"
+        aria-label={label}
+        onPointerMove={onMove}
+        onPointerLeave={onLeave}
+        style={{ rotateX, rotateY }}
+        className="glass glass-solid monogram-card group relative aspect-[4/5] w-full overflow-hidden rounded-[28px] [container-type:inline-size]"
+      >
+        <motion.div
+          aria-hidden="true"
+          style={{ y: glowY }}
+          className="absolute -inset-[20%] bg-[radial-gradient(40%_32%_at_72%_78%,rgba(255,91,36,0.34),rgba(255,91,36,0)_70%),radial-gradient(46%_36%_at_20%_18%,rgba(122,92,255,0.22),rgba(122,92,255,0)_72%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-6 top-6 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-paper/40"
+        >
+          <span>akirasata</span>
+          <span className="h-px w-10 bg-paper/25" />
+        </div>
+        <motion.div
+          aria-hidden="true"
+          style={{ y: lettersY }}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          <span className="monogram-glow absolute font-display text-[40cqw] font-semibold leading-none tracking-[-0.07em]">
+            DS
+          </span>
+          <span className="monogram relative font-display text-[40cqw] font-semibold leading-none tracking-[-0.07em]">
+            DS
+          </span>
+        </motion.div>
+        <span aria-hidden="true" className="monogram-sweep" />
+      </motion.div>
     </motion.div>
   );
 }
@@ -104,7 +157,7 @@ export function About() {
       />
       <div className="mt-20 grid gap-12 md:mt-28 md:grid-cols-12 md:gap-8">
         <figure className="md:col-span-5 lg:col-span-4">
-          <Portrait alt={t.about.photoAlt} />
+          <Monogram label={t.about.name} />
           <figcaption className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono text-xs">
             <span className="text-paper">
               <Copy select={(value) => value.about.name} />

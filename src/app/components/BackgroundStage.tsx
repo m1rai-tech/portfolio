@@ -10,16 +10,29 @@ import { motion } from "framer-motion";
 
 const variants = [
   {
-    id: "smoke",
-    label: "Дим",
-    load: () =>
-      import("./ShaderBackground").then((m) => ({ default: m.ShaderBackground })),
-  },
-  {
     id: "glass",
     label: "Скло",
-    load: () =>
-      import("./BgGlassShapes").then((m) => ({ default: m.BgGlassShapes })),
+    load: () => import("./BgGlassShapes").then((m) => ({ default: m.BgGlassShapes })),
+  },
+  {
+    id: "chrome",
+    label: "Хром",
+    load: () => import("./BgChrome").then((m) => ({ default: m.BgChrome })),
+  },
+  {
+    id: "fluid",
+    label: "Рідина",
+    load: () => import("./BgFluid").then((m) => ({ default: m.BgFluid })),
+  },
+  {
+    id: "caustics",
+    label: "Каустика",
+    load: () => import("./BgCaustics").then((m) => ({ default: m.BgCaustics })),
+  },
+  {
+    id: "fluted",
+    label: "Рифлене",
+    load: () => import("./BgFluted").then((m) => ({ default: m.BgFluted })),
   },
   {
     id: "particles",
@@ -35,6 +48,11 @@ const variants = [
     id: "dither",
     label: "Пікселі",
     load: () => import("./BgDither").then((m) => ({ default: m.BgDither })),
+  },
+  {
+    id: "smoke",
+    label: "Дим",
+    load: () => import("./ShaderBackground").then((m) => ({ default: m.ShaderBackground })),
   },
 ] as const;
 
@@ -104,7 +122,7 @@ export function BackgroundStage() {
       <div
         role="group"
         aria-label="Фон"
-        className="glass-switcher fixed bottom-4 left-1/2 z-[70] flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full border border-paper/15 bg-ink/40 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl backdrop-saturate-150 [scrollbar-width:none] md:bottom-6 md:left-6 md:translate-x-0"
+        className="glass-switcher fixed bottom-4 left-1/2 z-[70] flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full border border-paper/15 bg-ink/85 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_10px_40px_rgba(0,0,0,0.35)] [scrollbar-width:none] md:bottom-6 md:left-6 md:translate-x-0"
       >
         {variants.map((variant) => (
           <button

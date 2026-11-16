@@ -367,8 +367,11 @@ function absoluteTop(element: HTMLElement) {
   return top;
 }
 
+let cachedDocumentHeight = 0;
+
 function measureSections(): SectionBound[] {
   const documentHeight = document.documentElement.scrollHeight;
+  cachedDocumentHeight = documentHeight;
   const found = SECTION_IDS.map((id, index) => {
     const element = document.getElementById(id);
     return element ? { index, top: absoluteTop(element) } : null;
@@ -382,7 +385,10 @@ function measureSections(): SectionBound[] {
 
 function sectionFromScroll(bounds: SectionBound[], scrollY: number, viewportHeight: number) {
   if (bounds.length === 0) return 0;
-  const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight);
+  const maxScroll = Math.max(
+    0,
+    (cachedDocumentHeight || document.documentElement.scrollHeight) - viewportHeight,
+  );
   const tail = clamp01((scrollY - (maxScroll - viewportHeight)) / viewportHeight);
   const probe = scrollY + viewportHeight * (0.5 + 0.5 * tail);
   let section = bounds[0].index;

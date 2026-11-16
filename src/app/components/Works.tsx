@@ -143,7 +143,7 @@ function Card({
     <div ref={wrapper} className="sticky top-0 flex h-[100svh] items-center">
       <motion.article
         style={{ scale, rotate, top: index * 14 }}
-        className="relative flex w-full origin-top flex-col overflow-hidden rounded-[28px] border border-paper/10 bg-ink-2 shadow-[0_-30px_80px_rgba(0,0,0,0.45)] lg:h-[76vh] lg:flex-row"
+        className="relative flex w-full origin-top flex-col will-change-transform overflow-hidden rounded-[28px] border border-paper/10 bg-ink-2 shadow-[0_-30px_80px_rgba(0,0,0,0.45)] lg:h-[76vh] lg:flex-row"
       >
         <a
           href={href}

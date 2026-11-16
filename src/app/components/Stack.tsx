@@ -101,7 +101,7 @@ function Pinned() {
         <motion.div
           ref={track}
           style={{ x }}
-          className="flex w-max items-stretch gap-5 px-6 md:gap-8 md:px-10 xl:pl-[max(2.5rem,calc((100vw-90rem)/2+2.5rem))]"
+          className="flex w-max items-stretch gap-5 px-6 will-change-transform [backface-visibility:hidden] md:gap-8 md:px-10 xl:pl-[max(2.5rem,calc((100vw-90rem)/2+2.5rem))]"
         >
           <div className="flex w-[82vw] shrink-0 flex-col justify-center sm:w-[60vw] lg:w-[32rem]">
             <SectionTitle section="stack" />

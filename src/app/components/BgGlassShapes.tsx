@@ -1,5 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 
+type Vec3 = [number, number, number];
+type Vec4 = [number, number, number, number];
+
+type SoftboxSpec = [string, Vec3, [number, number], number];
+
+const SOFTBOXES: SoftboxSpec[] = [
+  ["PAPER * 1.25", [-0.27, 0.53, -0.8], [0.6, 0.08], 0.14],
+  ["EMBER * (1.6 + 1.4 * uWarm)", [0.6, -0.05, -0.8], [0.05, 0.95], 0.1],
+  ["DUSK * 2.1", [-0.71, -0.15, -0.69], [0.07, 0.85], 0.12],
+  ["PAPER * 1.7", [-0.56, 0.55, 0.62], [0.32, 0.22], 0.16],
+  ["EMBER * (0.7 + 0.8 * uWarm)", [0.77, -0.34, 0.54], [0.07, 0.5], 0.12],
+  ["mix(DUSK, PAPER, 0.35) * 0.55", [0.16, 0.95, 0.27], [0.8, 0.05], 0.1],
+];
+
+const glslFloat = (value: number) => value.toFixed(5);
+
+const glslVec3 = (value: Vec3) => `vec3(${value.map(glslFloat).join(", ")})`;
+
+function softboxTerm([color, axis, size, soft]: SoftboxSpec) {
+  const tangentLength = Math.hypot(axis[2], axis[0]) || 1;
+  const tangent: Vec3 = [-axis[2] / tangentLength, 0, axis[0] / tangentLength];
+  const bitangent: Vec3 = [
+    tangent[1] * axis[2] - tangent[2] * axis[1],
+    tangent[2] * axis[0] - tangent[0] * axis[2],
+    tangent[0] * axis[1] - tangent[1] * axis[0],
+  ];
+  return `  c += ${color} * softbox(d, ${glslVec3(axis)}, ${glslVec3(tangent)}, ${glslVec3(bitangent)}, vec2(${glslFloat(size[0])}, ${glslFloat(size[1])}), ${glslFloat(soft)}, blur);`;
+}
+
 const FRAGMENT_BODY = `uniform float uTime;
 uniform vec2 uRes;
 uniform float uVel;
@@ -8,6 +37,7 @@ uniform float uK;
 uniform float uFl;
 uniform float uWarm;
 uniform float uDisp;
+uniform float uSoft;
 uniform vec3 uCamPos;
 uniform mat3 uCam;
 uniform vec4 uCore;
@@ -23,13 +53,14 @@ uniform vec2 uM2;
 uniform mat3 uR0;
 uniform mat3 uR1;
 uniform mat3 uR2;
-uniform int uSteps;
-uniform int uInner;
 
 const vec3 INK = vec3(0.043, 0.039, 0.047);
 const vec3 EMBER = vec3(1.0, 0.357, 0.141);
 const vec3 DUSK = vec3(0.478, 0.361, 1.0);
 const vec3 PAPER = vec3(0.937, 0.914, 0.875);
+const vec3 KEY = vec3(-0.56353, 0.55347, 0.61383);
+const vec3 WARM_KEY = vec3(0.77682, -0.34302, 0.54479);
+const vec3 CAUSTIC = vec3(-0.30151, 0.50252, -0.80403);
 
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -74,75 +105,99 @@ float map(vec3 p) {
 }
 
 vec3 calcNormal(vec3 p) {
-  vec2 e = vec2(1.0, -1.0) * 0.002;
+  vec2 e = vec2(1.0, -1.0) * NORMAL_EPS;
   return normalize(e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) + e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
 }
 
-float softbox(vec3 d, vec3 axis, vec2 size, float soft) {
-  float w = dot(d, axis);
+float softbox(vec3 d, vec3 a, vec3 t, vec3 b, vec2 size, float soft, float blur) {
+  float w = dot(d, a);
   if (w <= 0.0) return 0.0;
-  vec3 t = normalize(cross(axis, vec3(0.0, 1.0, 0.0)));
-  vec3 b = cross(t, axis);
   vec2 q = vec2(dot(d, t), dot(d, b)) / w;
   vec2 e = abs(q) - size;
   float sd = length(max(e, 0.0)) + min(max(e.x, e.y), 0.0);
   float inner = 1.0 - 0.35 * clamp(length(q / size) * 0.7, 0.0, 1.0);
-  return (1.0 - smoothstep(-soft * 0.4, soft, sd)) * inner * smoothstep(0.0, 0.25, w);
+  float s = soft * blur;
+  return (1.0 - smoothstep(-s * 0.4, s, sd)) * inner * smoothstep(0.0, 0.25, w) * (1.5 / (0.5 + blur));
 }
 
-vec3 env(vec3 d) {
+vec3 env(vec3 d, float blur) {
   vec3 c = INK * 0.6;
   c += mix(DUSK, PAPER, 0.25) * 0.11 * smoothstep(0.1, 1.0, -d.z) * (0.6 + 0.4 * d.y);
   c += DUSK * 0.05 * smoothstep(-0.3, 1.0, d.y);
-  c += EMBER * 0.04 * uWarm * smoothstep(0.2, -1.0, d.y);
-  c += PAPER * 1.25 * softbox(d, vec3(-0.27, 0.53, -0.8), vec2(0.6, 0.08), 0.14);
-  c += EMBER * (1.6 + 1.4 * uWarm) * softbox(d, vec3(0.6, -0.05, -0.8), vec2(0.05, 0.95), 0.1);
-  c += DUSK * 2.1 * softbox(d, vec3(-0.71, -0.15, -0.69), vec2(0.07, 0.85), 0.12);
-  c += PAPER * 1.7 * softbox(d, vec3(-0.56, 0.55, 0.62), vec2(0.32, 0.22), 0.16);
-  c += EMBER * (0.7 + 0.8 * uWarm) * softbox(d, vec3(0.77, -0.34, 0.54), vec2(0.07, 0.5), 0.12);
-  c += mix(DUSK, PAPER, 0.35) * 0.55 * softbox(d, vec3(0.16, 0.95, 0.27), vec2(0.8, 0.05), 0.1);
+  c += EMBER * 0.04 * uWarm * (1.0 - smoothstep(-1.0, 0.2, d.y));
+${SOFTBOXES.map(softboxTerm).join("\n")}
   return c;
+}
+
+void bound(vec4 P, vec3 ro, vec3 rd, inout float tn, inout float tf, inout float haze) {
+  vec3 oc = ro - P.xyz;
+  float b = dot(oc, rd);
+  float c = max(dot(oc, oc) - b * b, 0.0);
+  float r = P.w + 0.45 + uK * 0.3;
+  float h = r * r - c;
+  if (h > 0.0) {
+    h = sqrt(h);
+    tn = min(tn, -b - h);
+    tf = max(tf, -b + h);
+  } else {
+    haze = min(haze, sqrt(c) - P.w);
+  }
 }
 
 vec3 glass(vec3 p, vec3 rd, out float glow) {
   vec3 n = calcNormal(p);
   float ndv = clamp(dot(-rd, n), 0.0, 1.0);
-  float fr = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
+  float edge = 1.0 - ndv;
+  float edge2 = edge * edge;
+  float fr = 0.04 + 0.96 * edge2 * edge2 * edge;
   vec3 rf = reflect(rd, n);
-  vec3 refl = env(rf);
-  vec3 ri = refract(rd, n, 1.0 / 1.47);
-  if (dot(ri, ri) < 0.001) ri = rd;
+  vec3 refl = env(rf, uSoft);
+  float tb = uSoft * TRANSMIT_BLUR;
+  vec3 ri = refract(rd, n, 0.68027);
   vec3 q = p - n * 0.012;
   float ti = 0.02;
-  for (int i = 0; i < 32; i++) {
-    if (i >= uInner) break;
+  for (int i = 0; i < INNER; i++) {
     float d = -map(q + ri * ti);
     if (d < 0.002) break;
-    ti += max(d * 0.9, 0.03);
+    ti += max(d, INNER_MIN);
   }
+  ti = max(ti - map(q + ri * ti), 0.02);
   float s0 = clamp(dot(uCore.xyz - q, ri), 0.0, ti);
   vec3 closest = q + ri * s0 - uCore.xyz;
   float cd2 = dot(closest, closest);
   glow = exp(-cd2 * 7.0) * min(ti, 1.2) + exp(-cd2 * 40.0) * 0.9;
   vec3 pe = q + ri * ti;
-  vec3 ne = calcNormal(pe);
-  vec3 oR = refract(ri, -ne, 1.47 - uDisp);
-  vec3 oG = refract(ri, -ne, 1.47);
-  vec3 oB = refract(ri, -ne, 1.47 + uDisp);
-  vec3 bounce = reflect(ri, -ne);
-  if (dot(oR, oR) < 0.001) oR = bounce;
-  if (dot(oG, oG) < 0.001) oG = bounce;
-  if (dot(oB, oB) < 0.001) oB = bounce;
-  vec3 tr = vec3(env(oR).r, env(oG).g, env(oB).b);
-  tr += env(bounce) * 0.12;
+  vec3 nx = -calcNormal(pe);
+  vec3 bounce = reflect(ri, nx);
+  float ci = dot(nx, ri);
+  float k = 1.0 - 2.1609 * (1.0 - ci * ci);
+  float sk = sqrt(max(k, 0.0));
+  vec3 oG = 1.47 * ri - (1.47 * ci + sk) * nx;
+  vec3 spread = (ri - (ci - 1.47 * (1.0 - ci * ci) / max(sk, 0.35)) * nx) * uDisp;
+  float pass = smoothstep(0.0, 0.3, k);
+  vec3 dR = normalize(mix(bounce, oG - spread, pass));
+  vec3 dB = normalize(mix(bounce, oG + spread, pass));
+#if LITE
+  vec3 eR = env(dR, tb);
+  vec3 eB = env(dB, tb);
+  vec3 dG = normalize(dR + dB);
+  vec3 tr = vec3(eR.r, (eR.g + eB.g) * 0.5, eB.b);
+  tr += (eR + eB) * 0.04 * (1.0 - pass);
+#else
+  vec3 dG = normalize(mix(bounce, oG, pass));
+  vec3 tr = vec3(env(dR, tb).r, env(dG, tb).g, env(dB, tb).b);
+  tr += env(bounce, tb) * 0.12;
+#endif
   tr *= exp(-ti * vec3(0.16, 0.2, 0.1)) * 0.92;
   tr += mix(DUSK, PAPER, 0.3) * 0.035 * min(ti, 2.0);
-  float caustic = pow(max(dot(oG, normalize(vec3(-0.3, 0.5, -0.8))), 0.0), 10.0);
+  float caustic = pow(max(dot(dG, CAUSTIC), 0.0), 10.0);
   tr += mix(PAPER, EMBER, 0.4) * caustic * 0.18;
   vec3 col = mix(tr, refl, fr);
-  col += pow(1.0 - ndv, 7.0) * mix(PAPER, DUSK, 0.35) * 0.7;
-  col += PAPER * 2.2 * pow(max(dot(rf, normalize(vec3(-0.56, 0.55, 0.62))), 0.0), 140.0);
-  col += EMBER * 1.2 * uWarm * pow(max(dot(rf, normalize(vec3(0.77, -0.34, 0.54))), 0.0), 60.0);
+  col += edge2 * edge2 * edge2 * edge * mix(PAPER, DUSK, 0.35) * 0.75;
+  col += mix(PAPER, DUSK, 0.2) * 0.22 * smoothstep(0.55, 0.95, edge) * smoothstep(-0.2, 0.8, n.y);
+  float sharp = 1.0 / uSoft;
+  col += PAPER * 2.2 * pow(max(dot(rf, KEY), 0.0), 140.0 * sharp);
+  col += EMBER * 1.2 * uWarm * pow(max(dot(rf, WARM_KEY), 0.0), 60.0 * sharp);
   return col;
 }
 
@@ -151,26 +206,35 @@ void main() {
   vec3 ro = uCamPos;
   vec3 rd = uCam * normalize(vec3(uv, -uFl));
   float pixel = 1.6 / (uRes.y * uFl);
-  float t = 0.0;
-  float minD = 100.0;
+
+  float tn = 1e5;
+  float tf = -1.0;
+  float haze = 100.0;
+  bound(uP0, ro, rd, tn, tf, haze);
+  bound(uP1, ro, rd, tn, tf, haze);
+  bound(uP2, ro, rd, tn, tf, haze);
+
+  float t = max(tn, 0.0);
   float edgeRatio = 100.0;
-  float edgeT = 0.0;
+  float edgeT = t;
   bool hit = false;
-  for (int i = 0; i < 72; i++) {
-    if (i >= uSteps) break;
-    float d = map(ro + rd * t);
-    minD = min(minD, d);
-    float ratio = d / max(t, 0.5);
-    if (ratio < edgeRatio) {
-      edgeRatio = ratio;
-      edgeT = t;
+  if (tf > t) {
+    float eps = max(0.0008, pixel * 0.35);
+    for (int i = 0; i < STEPS; i++) {
+      float d = map(ro + rd * t);
+      haze = min(haze, d);
+      float ratio = d / max(t, 0.5);
+      if (ratio < edgeRatio) {
+        edgeRatio = ratio;
+        edgeT = t;
+      }
+      if (d < eps * t + 0.0006) {
+        hit = true;
+        break;
+      }
+      t += d * RELAX;
+      if (t > tf) break;
     }
-    if (d < 0.0008 * t + 0.0006) {
-      hit = true;
-      break;
-    }
-    t += d * 0.85;
-    if (t > 18.0) break;
   }
   float coverage = hit ? 1.0 : 1.0 - smoothstep(0.0, pixel * 1.5, edgeRatio);
   if (!hit) t = edgeT;
@@ -181,7 +245,7 @@ void main() {
   float coreHalo = uCore.w * (exp(-dl * dl * 2.5) * 0.12 + exp(-dl * 1.2) * 0.05);
 
   vec3 color = INK;
-  color += DUSK * 0.045 * exp(-max(minD, 0.0) * 4.5) * uDim;
+  color += DUSK * 0.045 * exp(-max(haze, 0.0) * 4.5) * uDim;
   color += EMBER * coreHalo;
 
   if (coverage > 0.001) {
@@ -195,11 +259,13 @@ void main() {
   color = color * (1.0 + color / 6.0) / (1.0 + color);
 
   vec2 sv = gl_FragCoord.xy / uRes - 0.5;
-  float vignette = smoothstep(1.0, 0.25, length(sv * vec2(1.1, 1.25)));
+  float vignette = 1.0 - smoothstep(0.25, 1.0, length(sv * vec2(1.1, 1.25)));
   color = mix(INK * 0.6, color, 0.45 + 0.55 * vignette);
 
+#if POST == 0
   float grain = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 311.0) - 0.5;
-  color += grain * 0.022;
+  color += grain * GRAIN;
+#endif
 
   FRAG = vec4(max(color, 0.0), 1.0);
 }
@@ -222,6 +288,7 @@ const FRAGMENT_HEADER_WEBGL2 = `#version 300 es
 precision highp float;
 out vec4 fragColor;
 #define FRAG fragColor
+#define TEX texture
 `;
 
 const FRAGMENT_HEADER_WEBGL1 = `#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -230,10 +297,83 @@ precision highp float;
 precision mediump float;
 #endif
 #define FRAG gl_FragColor
+#define TEX texture2D
 `;
+
+const POST_BODY = `uniform sampler2D uTex;
+uniform vec2 uTexel;
+uniform float uTime;
+
+float hash(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy * uTexel;
+  vec3 cNW = TEX(uTex, uv + vec2(-1.0, -1.0) * uTexel).rgb;
+  vec3 cNE = TEX(uTex, uv + vec2(1.0, -1.0) * uTexel).rgb;
+  vec3 cSW = TEX(uTex, uv + vec2(-1.0, 1.0) * uTexel).rgb;
+  vec3 cSE = TEX(uTex, uv + vec2(1.0, 1.0) * uTexel).rgb;
+  vec3 cM = TEX(uTex, uv).rgb;
+  vec3 w = vec3(0.299, 0.587, 0.114);
+  float lNW = dot(cNW, w);
+  float lNE = dot(cNE, w);
+  float lSW = dot(cSW, w);
+  float lSE = dot(cSE, w);
+  float lM = dot(cM, w);
+  float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE)));
+  float lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+  vec3 color = cM;
+  if (lMax - lMin > max(0.012, lMax * 0.06)) {
+    vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));
+    float reduce = max((lNW + lNE + lSW + lSE) * 0.03125, 0.0078125);
+    float rcpMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + reduce);
+    dir = clamp(dir * rcpMin, vec2(-6.0), vec2(6.0)) * uTexel;
+    vec3 a = 0.5 * (TEX(uTex, uv - dir * 0.16667).rgb + TEX(uTex, uv + dir * 0.16667).rgb);
+    vec3 b = a * 0.5 + 0.25 * (TEX(uTex, uv - dir * 0.5).rgb + TEX(uTex, uv + dir * 0.5).rgb);
+    float lB = dot(b, w);
+    color = (lB < lMin || lB > lMax) ? a : b;
+  }
+  float grain = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 311.0) - 0.5;
+  color += grain * GRAIN;
+  FRAG = vec4(max(color, 0.0), 1.0);
+}
+`;
+
+const QUALITY_DEFINES = {
+  full: `#define LITE 0
+#define STEPS 64
+#define INNER 20
+#define INNER_MIN 0.03
+#define RELAX 0.85
+#define NORMAL_EPS 0.002
+#define GRAIN 0.022
+#define TRANSMIT_BLUR 1.35
+`,
+  lite: `#define LITE 1
+#define STEPS 36
+#define INNER 10
+#define INNER_MIN 0.04
+#define RELAX 0.92
+#define NORMAL_EPS 0.0035
+#define GRAIN 0.018
+#define TRANSMIT_BLUR 1.25
+`,
+};
 
 const SECTION_IDS = ["hero", "about", "stack", "works", "contact"];
 const MAX_PIXEL_RATIO = 1.25;
+const LITE_PIXEL_RATIO = 1;
+const FULL_SCALE = 0.5;
+const LITE_SCALE = 0.38;
+const MIN_SCALE = 0.24;
+const FOCAL = 1.4;
+const FRAME_INTERVAL = 1000 / 60;
+const BUSY_INTERVAL = 1000 / 30;
+const SLOW_FRAME_MS = 21;
+const WARMUP_FRAMES = 45;
 const STILL_TIME = 8;
 const FALLBACK_BACKGROUND =
   "radial-gradient(40% 50% at 82% 48%, rgba(122, 92, 255, 0.14), transparent 70%), radial-gradient(30% 35% at 88% 70%, rgba(255, 91, 36, 0.12), transparent 70%), #0b0a0c";
@@ -247,6 +387,7 @@ const UNIFORM_NAMES = [
   "uFl",
   "uWarm",
   "uDisp",
+  "uSoft",
   "uCamPos",
   "uCam",
   "uCore",
@@ -262,8 +403,6 @@ const UNIFORM_NAMES = [
   "uR0",
   "uR1",
   "uR2",
-  "uSteps",
-  "uInner",
 ] as const;
 
 type UniformName = (typeof UNIFORM_NAMES)[number];
@@ -272,7 +411,21 @@ type Renderer = {
   gl: WebGLRenderingContext | WebGL2RenderingContext;
   program: WebGLProgram;
   buffer: WebGLBuffer;
+  lite: boolean;
+  post: PostPass | null;
   uniforms: Record<UniformName, WebGLUniformLocation | null>;
+  objectUniforms: [WebGLUniformLocation | null, WebGLUniformLocation | null, WebGLUniformLocation | null, WebGLUniformLocation | null][];
+};
+
+type PostPass = {
+  program: WebGLProgram | null;
+  texture: WebGLTexture;
+  framebuffer: WebGLFramebuffer;
+  tex: WebGLUniformLocation | null;
+  texel: WebGLUniformLocation | null;
+  time: WebGLUniformLocation | null;
+  width: number;
+  height: number;
 };
 
 type SectionBound = {
@@ -281,9 +434,6 @@ type SectionBound = {
   length: number;
 };
 
-type Vec3 = [number, number, number];
-type Vec4 = [number, number, number, number];
-
 type ObjectKey = {
   pos: Vec3;
   size: Vec4;
@@ -291,6 +441,7 @@ type ObjectKey = {
   wobble: number;
   euler: Vec3;
   rate: Vec3;
+  edge?: [number, number];
 };
 
 type SceneKey = {
@@ -361,9 +512,9 @@ const SCENE: SceneKey[] = [
     sync: 0,
     spin: 0.45,
     objects: [
-      { pos: [3.45, 1.75, -1.2], size: [0.62, 0.22, 0.4, 0.3], morph: 0, wobble: 0, euler: [1.0, 0.3, 0.5], rate: [0.04, 0.1, 0.02] },
-      { pos: [-3.5, -1.75, -1.2], size: [0.5, 0.2, 0.45, 0.26], morph: 1, wobble: 0, euler: [0.2, 0, -0.9], rate: [0.03, 0.08, 0.02] },
-      { pos: [3.5, -1.8, -1.6], size: [0.4, 0.2, 0, 0.28], morph: 1, wobble: 0.03, euler: [0.3, 0.2, 0], rate: [0.06, 0.05, 0.04] },
+      { pos: [3.45, 1.75, -1.2], size: [0.62, 0.22, 0.4, 0.3], morph: 0, wobble: 0, euler: [1.0, 0.3, 0.5], rate: [0.04, 0.1, 0.02], edge: [0.98, 0.5] },
+      { pos: [-3.5, -1.75, -1.2], size: [0.5, 0.2, 0.45, 0.26], morph: 1, wobble: 0, euler: [0.2, 0, -0.9], rate: [0.03, 0.08, 0.02], edge: [-1.9, -1.4] },
+      { pos: [3.5, -1.8, -1.6], size: [0.4, 0.2, 0, 0.28], morph: 1, wobble: 0.03, euler: [0.3, 0.2, 0], rate: [0.06, 0.05, 0.04], edge: [1.9, -1.5] },
     ],
   },
   {
@@ -388,6 +539,8 @@ const OBJECT_PHASE: Vec3[] = [
   [2.6, 0.7, 1.9],
 ];
 
+const loseExtensions = new WeakMap<HTMLCanvasElement, WEBGL_lose_context>();
+
 const lerp = (from: number, to: number, amount: number) => from + (to - from) * amount;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -399,52 +552,42 @@ const smoothstep = (edge0: number, edge1: number, value: number) => {
 
 const easeFactor = (rate: number, deltaSeconds: number) => 1 - Math.pow(1 - rate, deltaSeconds * 60);
 
-const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
-
-const lerp4 = (a: Vec4, b: Vec4, t: number): Vec4 => [
-  lerp(a[0], b[0], t),
-  lerp(a[1], b[1], t),
-  lerp(a[2], b[2], t),
-  lerp(a[3], b[3], t),
-];
-
-function quatFromEuler(x: number, y: number, z: number): Vec4 {
+function quatFromEuler(x: number, y: number, z: number, out: Vec4) {
   const cx = Math.cos(x / 2);
   const sx = Math.sin(x / 2);
   const cy = Math.cos(y / 2);
   const sy = Math.sin(y / 2);
   const cz = Math.cos(z / 2);
   const sz = Math.sin(z / 2);
-  return [
-    sx * cy * cz - cx * sy * sz,
-    cx * sy * cz + sx * cy * sz,
-    cx * cy * sz - sx * sy * cz,
-    cx * cy * cz + sx * sy * sz,
-  ];
+  out[0] = sx * cy * cz - cx * sy * sz;
+  out[1] = cx * sy * cz + sx * cy * sz;
+  out[2] = cx * cy * sz - sx * sy * cz;
+  out[3] = cx * cy * cz + sx * sy * sz;
+  return out;
 }
 
-function slerp(a: Vec4, b: Vec4, t: number): Vec4 {
+function slerp(a: Vec4, b: Vec4, t: number, out: Vec4) {
   let dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-  let target = b;
-  if (dot < 0) {
-    dot = -dot;
-    target = [-b[0], -b[1], -b[2], -b[3]];
+  const sign = dot < 0 ? -1 : 1;
+  dot *= sign;
+  let wa = 1 - t;
+  let wb = t * sign;
+  if (dot <= 0.9995) {
+    const theta = Math.acos(dot);
+    const sinTheta = Math.sin(theta);
+    wa = Math.sin((1 - t) * theta) / sinTheta;
+    wb = (Math.sin(t * theta) / sinTheta) * sign;
   }
-  if (dot > 0.9995) {
-    const mixed = lerp4(a, target, t);
-    const length = Math.hypot(mixed[0], mixed[1], mixed[2], mixed[3]) || 1;
-    return [mixed[0] / length, mixed[1] / length, mixed[2] / length, mixed[3] / length];
-  }
-  const theta = Math.acos(dot);
-  const sinTheta = Math.sin(theta);
-  const wa = Math.sin((1 - t) * theta) / sinTheta;
-  const wb = Math.sin(t * theta) / sinTheta;
-  return [
-    a[0] * wa + target[0] * wb,
-    a[1] * wa + target[1] * wb,
-    a[2] * wa + target[2] * wb,
-    a[3] * wa + target[3] * wb,
-  ];
+  out[0] = a[0] * wa + b[0] * wb;
+  out[1] = a[1] * wa + b[1] * wb;
+  out[2] = a[2] * wa + b[2] * wb;
+  out[3] = a[3] * wa + b[3] * wb;
+  const length = Math.hypot(out[0], out[1], out[2], out[3]) || 1;
+  out[0] /= length;
+  out[1] /= length;
+  out[2] /= length;
+  out[3] /= length;
+  return out;
 }
 
 function matFromQuat(q: Vec4, out: Float32Array) {
@@ -471,8 +614,7 @@ function absoluteTop(element: HTMLElement) {
   return top;
 }
 
-function measureSections(): SectionBound[] {
-  const documentHeight = document.documentElement.scrollHeight;
+function measureSections(documentHeight: number): SectionBound[] {
   const found = SECTION_IDS.map((id, index) => {
     const element = document.getElementById(id);
     return element ? { index, top: absoluteTop(element) } : null;
@@ -484,9 +626,9 @@ function measureSections(): SectionBound[] {
   });
 }
 
-function sectionFromScroll(bounds: SectionBound[], scrollY: number, viewportHeight: number) {
+function sectionFromScroll(bounds: SectionBound[], scrollY: number, viewportHeight: number, documentHeight: number) {
   if (bounds.length === 0) return 0;
-  const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight);
+  const maxScroll = Math.max(0, documentHeight - viewportHeight);
   const tail = clamp01((scrollY - (maxScroll - viewportHeight)) / viewportHeight);
   const probe = scrollY + viewportHeight * (0.5 + 0.5 * tail);
   let section = bounds[0].index;
@@ -529,19 +671,16 @@ function getContext(canvas: HTMLCanvasElement) {
   return webgl1 ? { gl: webgl1, isWebgl2: false } : null;
 }
 
-function createRenderer(canvas: HTMLCanvasElement): Renderer | null {
-  const context = getContext(canvas);
-  if (!context) return null;
-  const { gl, isWebgl2 } = context;
-  if (gl.isContextLost()) return null;
+function buildProgram(gl: WebGLRenderingContext, isWebgl2: boolean, fragmentSource: string) {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, isWebgl2 ? VERTEX_WEBGL2 : VERTEX_WEBGL1);
-  const fragment = compileShader(
-    gl,
-    gl.FRAGMENT_SHADER,
-    (isWebgl2 ? FRAGMENT_HEADER_WEBGL2 : FRAGMENT_HEADER_WEBGL1) + FRAGMENT_BODY,
-  );
+  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
   const program = gl.createProgram();
-  if (!vertex || !fragment || !program) return null;
+  if (!vertex || !fragment || !program) {
+    if (vertex) gl.deleteShader(vertex);
+    if (fragment) gl.deleteShader(fragment);
+    if (program) gl.deleteProgram(program);
+    return null;
+  }
   gl.attachShader(program, vertex);
   gl.attachShader(program, fragment);
   gl.bindAttribLocation(program, 0, "aPosition");
@@ -552,8 +691,66 @@ function createRenderer(canvas: HTMLCanvasElement): Renderer | null {
     gl.deleteProgram(program);
     return null;
   }
-  const buffer = gl.createBuffer();
-  if (!buffer) return null;
+  return program;
+}
+
+function destroyPost(gl: WebGLRenderingContext, post: PostPass | null) {
+  if (!post) return;
+  gl.deleteFramebuffer(post.framebuffer);
+  gl.deleteTexture(post.texture);
+  if (post.program) gl.deleteProgram(post.program);
+}
+
+function createPost(gl: WebGLRenderingContext, isWebgl2: boolean, defines: string): PostPass | null {
+  const texture = gl.createTexture();
+  const framebuffer = gl.createFramebuffer();
+  if (!texture || !framebuffer) {
+    if (texture) gl.deleteTexture(texture);
+    if (framebuffer) gl.deleteFramebuffer(framebuffer);
+    return null;
+  }
+  const post: PostPass = { program: null, texture, framebuffer, tex: null, texel: null, time: null, width: 1, height: 1 };
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  post.program = complete
+    ? buildProgram(gl, isWebgl2, (isWebgl2 ? FRAGMENT_HEADER_WEBGL2 : FRAGMENT_HEADER_WEBGL1) + defines + POST_BODY)
+    : null;
+  if (!post.program) {
+    destroyPost(gl, post);
+    return null;
+  }
+  post.tex = gl.getUniformLocation(post.program, "uTex");
+  post.texel = gl.getUniformLocation(post.program, "uTexel");
+  post.time = gl.getUniformLocation(post.program, "uTime");
+  return post;
+}
+
+function createRenderer(canvas: HTMLCanvasElement, lite: boolean): Renderer | null {
+  const context = getContext(canvas);
+  if (!context) return null;
+  const { gl, isWebgl2 } = context;
+  if (gl.isContextLost()) return null;
+  const defines = lite ? QUALITY_DEFINES.lite : QUALITY_DEFINES.full;
+  const post = createPost(gl, isWebgl2, defines);
+  const program = buildProgram(
+    gl,
+    isWebgl2,
+    (isWebgl2 ? FRAGMENT_HEADER_WEBGL2 : FRAGMENT_HEADER_WEBGL1) + `#define POST ${post ? 1 : 0}\n` + defines + FRAGMENT_BODY,
+  );
+  const buffer = program ? gl.createBuffer() : null;
+  if (!program || !buffer) {
+    if (program) gl.deleteProgram(program);
+    destroyPost(gl, post);
+    return null;
+  }
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);
@@ -562,13 +759,19 @@ function createRenderer(canvas: HTMLCanvasElement): Renderer | null {
   const uniforms = Object.fromEntries(
     UNIFORM_NAMES.map((name) => [name, gl.getUniformLocation(program, name)]),
   ) as Record<UniformName, WebGLUniformLocation | null>;
-  return { gl, program, buffer, uniforms };
+  const objectUniforms: Renderer["objectUniforms"] = [
+    [uniforms.uP0, uniforms.uS0, uniforms.uM0, uniforms.uR0],
+    [uniforms.uP1, uniforms.uS1, uniforms.uM1, uniforms.uR1],
+    [uniforms.uP2, uniforms.uS2, uniforms.uM2, uniforms.uR2],
+  ];
+  return { gl, program, buffer, lite, post, uniforms, objectUniforms };
 }
 
 function destroyRenderer(renderer: Renderer | null) {
   if (!renderer || renderer.gl.isContextLost()) return;
   renderer.gl.deleteBuffer(renderer.buffer);
   renderer.gl.deleteProgram(renderer.program);
+  destroyPost(renderer.gl, renderer.post);
 }
 
 export function BgGlassShapes() {
@@ -581,23 +784,35 @@ export function BgGlassShapes() {
 
     const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const finePointerQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
-
-    let renderer = createRenderer(canvas);
-    if (!renderer) {
-      setUnsupported(true);
-      return;
-    }
+    const host = canvas.parentElement ?? canvas;
 
     let reducedMotion = reducedMotionQuery.matches;
     let finePointer = finePointerQuery.matches;
+    let lite = host.clientWidth < 768 || !finePointer;
+    let contextLost = false;
+    let renderer: Renderer | null = null;
+
+    const pendingRestore = loseExtensions.get(canvas);
+    if (pendingRestore) {
+      loseExtensions.delete(canvas);
+      contextLost = true;
+    } else {
+      renderer = createRenderer(canvas, lite);
+      if (!renderer) {
+        setUnsupported(true);
+        return;
+      }
+    }
+
     let frameId = 0;
     let lastFrame = performance.now();
     let elapsed = 0;
-    let contextLost = false;
-    let bounds = measureSections();
+    let viewportHeight = window.innerHeight;
+    let documentHeight = document.documentElement.scrollHeight;
+    let bounds = measureSections(documentHeight);
 
     let lastScrollY = window.scrollY;
-    let targetSection = sectionFromScroll(bounds, lastScrollY, window.innerHeight);
+    let targetSection = sectionFromScroll(bounds, lastScrollY, viewportHeight, documentHeight);
     let section = targetSection;
     let velocity = 0;
     let targetMouseX = 0.5;
@@ -607,10 +822,12 @@ export function BgGlassShapes() {
     let targetHover = 0;
     let hover = 0;
 
-    let compact = false;
-    let renderScale = 0.5;
+    let quality = 1;
     let slowFrames = 0;
     let sampledFrames = 0;
+    let warmup = WARMUP_FRAMES;
+    let calmWindows = 0;
+    let recoveries = 0;
 
     const spins: Vec3[] = [
       [0, 0, 0],
@@ -619,14 +836,22 @@ export function BgGlassShapes() {
     ];
     let sharedSpin = 0;
 
+    let fromKey = SCENE[0];
+    let toKey = SCENE[1];
+    let mixAmount = 0;
+
     const matrices = [new Float32Array(9), new Float32Array(9), new Float32Array(9)];
     const cameraMatrix = new Float32Array(9);
+    const sharedQuat: Vec4 = [0, 0, 0, 1];
+    const ownQuat: Vec4 = [0, 0, 0, 1];
+    const mixedQuat: Vec4 = [0, 0, 0, 1];
+    const camQuat: Vec4 = [0, 0, 0, 1];
+
+    const baseScale = () => (lite ? LITE_SCALE : FULL_SCALE);
 
     const resizeCanvas = () => {
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-      const host = canvas.parentElement ?? canvas;
-      compact = host.clientWidth < 768 || !finePointer;
-      const scale = Math.min(renderScale, compact ? 0.42 : 0.5);
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, lite ? LITE_PIXEL_RATIO : MAX_PIXEL_RATIO);
+      const scale = Math.max(MIN_SCALE, baseScale() * quality);
       const width = Math.max(1, Math.round(host.clientWidth * pixelRatio * scale));
       const height = Math.max(1, Math.round(host.clientHeight * pixelRatio * scale));
       if (canvas.width !== width || canvas.height !== height) {
@@ -635,126 +860,197 @@ export function BgGlassShapes() {
       }
     };
 
+    const applyQualityMode = () => {
+      const nextLite = host.clientWidth < 768 || !finePointer;
+      if (nextLite === lite) return;
+      lite = nextLite;
+      quality = 1;
+      warmup = WARMUP_FRAMES;
+      if (!renderer || contextLost) return;
+      const next = createRenderer(canvas, lite);
+      if (!next) return;
+      destroyRenderer(renderer);
+      renderer = next;
+    };
+
     const sceneAt = (value: number) => {
       const clamped = Math.min(SCENE.length - 1, Math.max(0, value));
       const index = Math.min(SCENE.length - 2, Math.floor(clamped));
       const raw = clamped - index;
-      const amount = raw * raw * (3 - 2 * raw);
-      return { from: SCENE[index], to: SCENE[index + 1], amount };
+      fromKey = SCENE[index];
+      toKey = SCENE[index + 1];
+      mixAmount = raw * raw * (3 - 2 * raw);
     };
 
     const advance = (deltaSeconds: number) => {
-      const { from, to, amount } = sceneAt(section);
-      const spin = lerp(from.spin, to.spin, amount) * (1 + velocity * 6);
+      sceneAt(section);
+      const spin = lerp(fromKey.spin, toKey.spin, mixAmount) * (1 + velocity * 6) * 2.2 * deltaSeconds;
       for (let i = 0; i < 3; i++) {
-        const rate = lerp3(from.objects[i].rate, to.objects[i].rate, amount);
-        spins[i][0] += rate[0] * deltaSeconds * spin * 2.2;
-        spins[i][1] += rate[1] * deltaSeconds * spin * 2.2;
-        spins[i][2] += rate[2] * deltaSeconds * spin * 2.2;
+        const a = fromKey.objects[i].rate;
+        const b = toKey.objects[i].rate;
+        spins[i][0] += lerp(a[0], b[0], mixAmount) * spin;
+        spins[i][1] += lerp(a[1], b[1], mixAmount) * spin;
+        spins[i][2] += lerp(a[2], b[2], mixAmount) * spin;
       }
-      sharedSpin += deltaSeconds * 0.45 * spin;
+      sharedSpin += 0.45 * spin / 2.2;
+    };
+
+    const placeX = (key: ObjectKey, fit: number, portrait: number, halfWidth: number) => {
+      const x = key.pos[0] * (fit + (1 - fit) * 0.2);
+      return key.edge ? lerp(x, key.edge[0] * halfWidth, portrait) : x;
+    };
+
+    const placeY = (key: ObjectKey, fit: number, portrait: number, lift: number, halfHeight: number) => {
+      const y = key.pos[1] * lift;
+      return key.edge ? lerp(y, key.edge[1] * halfHeight, portrait) : y;
     };
 
     const draw = () => {
       if (!renderer || contextLost) return;
-      const { gl, uniforms } = renderer;
-      const { from, to, amount } = sceneAt(section);
+      const { gl, uniforms, objectUniforms, post } = renderer;
+      if (post) {
+        if (post.width !== canvas.width || post.height !== canvas.height) {
+          post.width = canvas.width;
+          post.height = canvas.height;
+          gl.bindTexture(gl.TEXTURE_2D, post.texture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, post.width, post.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, post.framebuffer);
+      }
+      gl.useProgram(renderer.program);
+      sceneAt(section);
+      const from = fromKey;
+      const to = toKey;
+      const amount = mixAmount;
       const time = reducedMotion ? STILL_TIME : elapsed;
       const aspect = canvas.width / Math.max(1, canvas.height);
       const fit = Math.min(1, Math.max(0.3, aspect / 1.6));
       const sizeFit = 0.55 + 0.45 * fit;
       const portraitLift = (1 - fit) * 0.35;
+      const lift = (1 + portraitLift) * (1 - (1 - fit) * 0.1);
+      const portrait = clamp01((0.75 - fit) / 0.4);
       const sync = lerp(from.sync, to.sync, amount);
-      const sharedQuat = quatFromEuler(1.25, sharedSpin, 0.18);
+      const motionVelocity = reducedMotion ? 0 : velocity;
+      quatFromEuler(1.25, sharedSpin, 0.18, sharedQuat);
 
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform1f(uniforms.uTime, time);
       gl.uniform2f(uniforms.uRes, canvas.width, canvas.height);
-      gl.uniform1f(uniforms.uVel, reducedMotion ? 0 : velocity);
+      gl.uniform1f(uniforms.uVel, motionVelocity);
       gl.uniform1f(uniforms.uDim, lerp(from.dim, to.dim, amount) * (0.78 + 0.22 * fit));
-      gl.uniform1f(uniforms.uK, Math.max(0.02, lerp(from.k, to.k, amount) * sizeFit));
-      gl.uniform1f(uniforms.uFl, 1.4);
-      const warm = lerp(from.warm, to.warm, amount);
-      gl.uniform1f(uniforms.uWarm, warm);
-      gl.uniform1f(uniforms.uDisp, 0.026 + (reducedMotion ? 0 : velocity * 0.08));
-      gl.uniform1i(uniforms.uSteps, compact ? 44 : 64);
-      gl.uniform1i(uniforms.uInner, compact ? 14 : 22);
+      const k = Math.max(0.02, lerp(from.k, to.k, amount) * sizeFit);
+      gl.uniform1f(uniforms.uK, k);
+      gl.uniform1f(uniforms.uFl, FOCAL);
+      gl.uniform1f(uniforms.uWarm, lerp(from.warm, to.warm, amount));
+      gl.uniform1f(uniforms.uDisp, 0.022 + motionVelocity * 0.07);
+      gl.uniform1f(uniforms.uSoft, Math.min(2.2, Math.max(1, 560 / Math.max(1, canvas.height))));
 
       const camDistance = lerp(from.cam, to.cam, amount);
       const yaw = (mouseX - 0.5) * 0.14 * hover;
       const pitch = (mouseY - 0.5) * 0.1 * hover;
-      const camQuat = quatFromEuler(pitch, yaw, 0);
+      quatFromEuler(pitch, yaw, 0, camQuat);
       matFromQuat(camQuat, cameraMatrix);
-      const camX = cameraMatrix[6] * camDistance;
-      const camY = cameraMatrix[7] * camDistance;
-      const camZ = cameraMatrix[8] * camDistance;
-      gl.uniform3f(uniforms.uCamPos, camX, camY, camZ);
+      gl.uniform3f(
+        uniforms.uCamPos,
+        cameraMatrix[6] * camDistance,
+        cameraMatrix[7] * camDistance,
+        cameraMatrix[8] * camDistance,
+      );
       gl.uniformMatrix3fv(uniforms.uCam, false, cameraMatrix);
 
       const core = lerp(from.core, to.core, amount);
-      const coreY = -1.72 * (1 + portraitLift) * (1 - (1 - fit) * 0.1);
-      gl.uniform4f(uniforms.uCore, 0, coreY, 0, core);
-
-      const positionUniforms = [uniforms.uP0, uniforms.uP1, uniforms.uP2];
-      const sizeUniforms = [uniforms.uS0, uniforms.uS1, uniforms.uS2];
-      const morphUniforms = [uniforms.uM0, uniforms.uM1, uniforms.uM2];
-      const rotationUniforms = [uniforms.uR0, uniforms.uR1, uniforms.uR2];
+      gl.uniform4f(uniforms.uCore, 0, -1.72 * lift, 0, core);
 
       for (let i = 0; i < 3; i++) {
         const a = from.objects[i];
         const b = to.objects[i];
-        const pos = lerp3(a.pos, b.pos, amount);
-        const size = lerp4(a.size, b.size, amount);
+        const z = lerp(a.pos[2], b.pos[2], amount);
+        const halfHeight = ((camDistance - z) * 0.5) / FOCAL;
+        const halfWidth = halfHeight * aspect;
+        const x = lerp(placeX(a, fit, portrait, halfWidth), placeX(b, fit, portrait, halfWidth), amount);
+        const bob = Math.sin(time * 0.45 + i * 2.1) * 0.09 * lift;
+        const y = lerp(placeY(a, fit, portrait, lift, halfHeight), placeY(b, fit, portrait, lift, halfHeight), amount) + bob;
+        const s0 = lerp(a.size[0], b.size[0], amount) * sizeFit;
+        const s1 = lerp(a.size[1], b.size[1], amount) * sizeFit;
+        const s2 = lerp(a.size[2], b.size[2], amount) * sizeFit;
+        const s3 = lerp(a.size[3], b.size[3], amount) * sizeFit;
         const morph = lerp(a.morph, b.morph, amount);
         const wobble = lerp(a.wobble, b.wobble, amount) * sizeFit;
-        const euler = lerp3(a.euler, b.euler, amount);
-        const bob = Math.sin(time * 0.45 + i * 2.1) * 0.09;
-        const x = pos[0] * (fit + (1 - fit) * 0.2);
-        const y = (pos[1] + bob) * (1 + portraitLift) * (1 - (1 - fit) * 0.1);
-        const s0 = size[0] * sizeFit;
-        const s1 = size[1] * sizeFit;
-        const s2 = size[2] * sizeFit;
-        const s3 = size[3] * sizeFit;
-        const extent = Math.max(s0 + s1, s2 + s3) * (1 + velocity * 0.35) + wobble + 0.08;
-        gl.uniform4f(positionUniforms[i], x, y, pos[2], extent);
-        gl.uniform4f(sizeUniforms[i], s0, s1, s2, s3);
-        gl.uniform2f(morphUniforms[i], morph, wobble);
+        const extent = Math.max(s0 + s1, s2 + s3) * (1 + motionVelocity * 0.35) + wobble + 0.08;
+        const slots = objectUniforms[i];
+        gl.uniform4f(slots[0], x, y, z, extent);
+        gl.uniform4f(slots[1], s0, s1, s2, s3);
+        gl.uniform2f(slots[2], morph, wobble);
         const phase = OBJECT_PHASE[i];
-        const own = quatFromEuler(
-          euler[0] + spins[i][0] + phase[0] * 0.2,
-          euler[1] + spins[i][1] + phase[1],
-          euler[2] + spins[i][2],
+        quatFromEuler(
+          lerp(a.euler[0], b.euler[0], amount) + spins[i][0] + phase[0] * 0.2,
+          lerp(a.euler[1], b.euler[1], amount) + spins[i][1] + phase[1],
+          lerp(a.euler[2], b.euler[2], amount) + spins[i][2],
+          ownQuat,
         );
-        matFromQuat(slerp(own, sharedQuat, sync), matrices[i]);
-        gl.uniformMatrix3fv(rotationUniforms[i], false, matrices[i]);
+        matFromQuat(slerp(ownQuat, sharedQuat, sync, mixedQuat), matrices[i]);
+        gl.uniformMatrix3fv(slots[3], false, matrices[i]);
       }
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      if (post && post.program) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.useProgram(post.program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, post.texture);
+        gl.uniform1i(post.tex, 0);
+        gl.uniform2f(post.texel, 1 / canvas.width, 1 / canvas.height);
+        gl.uniform1f(post.time, time);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+    };
+
+    const adaptQuality = (frameMs: number, interval: number) => {
+      if (warmup > 0) {
+        warmup -= 1;
+        return;
+      }
+      sampledFrames += 1;
+      if (frameMs > Math.max(SLOW_FRAME_MS, interval + 4.5) && frameMs < 500) slowFrames += 1;
+      if (sampledFrames < 60) return;
+      const scale = baseScale() * quality;
+      if (slowFrames > 30 && scale > MIN_SCALE + 0.005) {
+        quality *= 0.82;
+        calmWindows = 0;
+        resizeCanvas();
+      } else if (slowFrames < 4 && quality < 1 && recoveries < 2) {
+        calmWindows += 1;
+        if (calmWindows >= 5) {
+          calmWindows = 0;
+          recoveries += 1;
+          quality = Math.min(1, quality / 0.82);
+          resizeCanvas();
+        }
+      } else {
+        calmWindows = 0;
+      }
+      sampledFrames = 0;
+      slowFrames = 0;
     };
 
     const tick = (now: number) => {
       frameId = 0;
       if (document.hidden || contextLost || reducedMotion) return;
-      const rawDelta = Math.max(0, (now - lastFrame) / 1000);
-      const deltaSeconds = Math.min(0.1, rawDelta);
-      lastFrame = now;
+      frameId = requestAnimationFrame(tick);
+      const since = now - lastFrame;
+      const interval = lite && velocity > 0.3 ? BUSY_INTERVAL : FRAME_INTERVAL;
+      if (since < interval - 1.5) return;
+      const carry = since >= interval && since < interval * 2 ? since - interval : 0;
+      lastFrame = now - carry;
+      const deltaSeconds = Math.min(0.1, since / 1000);
       elapsed += deltaSeconds;
-
-      sampledFrames += 1;
-      if (rawDelta > 0.021 && rawDelta < 0.5) slowFrames += 1;
-      if (sampledFrames >= 60) {
-        if (slowFrames > 30 && renderScale > 0.26) {
-          renderScale = Math.max(0.26, renderScale * 0.82);
-          resizeCanvas();
-        }
-        sampledFrames = 0;
-        slowFrames = 0;
-      }
+      adaptQuality(since, interval);
 
       const scrollY = window.scrollY;
       const scrollSpeed = deltaSeconds > 0 ? Math.abs(scrollY - lastScrollY) / deltaSeconds : 0;
       lastScrollY = scrollY;
-      targetSection = sectionFromScroll(bounds, scrollY, window.innerHeight);
+      targetSection = sectionFromScroll(bounds, scrollY, viewportHeight, documentHeight);
 
       const targetVelocity = clamp01(scrollSpeed / 3500);
       const velocityRate = targetVelocity > velocity ? 0.18 : 0.05;
@@ -766,12 +1062,21 @@ export function BgGlassShapes() {
 
       advance(deltaSeconds);
       draw();
-      frameId = requestAnimationFrame(tick);
     };
 
-    const renderStill = () => {
-      targetSection = sectionFromScroll(bounds, window.scrollY, window.innerHeight);
+    let stillSection = -1;
+    let stillWidth = 0;
+    let stillHeight = 0;
+
+    const renderStill = (force: boolean) => {
+      targetSection = sectionFromScroll(bounds, window.scrollY, viewportHeight, documentHeight);
+      const unchanged =
+        Math.abs(targetSection - stillSection) < 0.002 && stillWidth === canvas.width && stillHeight === canvas.height;
+      if (unchanged && !force) return;
       section = targetSection;
+      stillSection = targetSection;
+      stillWidth = canvas.width;
+      stillHeight = canvas.height;
       velocity = 0;
       hover = 0;
       draw();
@@ -780,10 +1085,10 @@ export function BgGlassShapes() {
     const start = () => {
       if (frameId || document.hidden || contextLost) return;
       if (reducedMotion) {
-        renderStill();
+        renderStill(true);
         return;
       }
-      lastFrame = performance.now();
+      lastFrame = performance.now() - FRAME_INTERVAL;
       lastScrollY = window.scrollY;
       frameId = requestAnimationFrame(tick);
     };
@@ -794,15 +1099,16 @@ export function BgGlassShapes() {
     };
 
     const remeasure = () => {
-      bounds = measureSections();
+      viewportHeight = window.innerHeight;
+      documentHeight = document.documentElement.scrollHeight;
+      bounds = measureSections(documentHeight);
+      applyQualityMode();
       resizeCanvas();
-      if (reducedMotion) renderStill();
+      if (reducedMotion && !document.hidden) renderStill(false);
     };
 
     const handleScroll = () => {
-      if (!reducedMotion) return;
-      const next = sectionFromScroll(bounds, window.scrollY, window.innerHeight);
-      if (Math.abs(next - section) > 0.001) renderStill();
+      if (reducedMotion && !document.hidden) renderStill(false);
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -829,7 +1135,9 @@ export function BgGlassShapes() {
 
     const handlePointerQueryChange = () => {
       finePointer = finePointerQuery.matches;
+      applyQualityMode();
       resizeCanvas();
+      if (reducedMotion) renderStill(true);
     };
 
     const handleContextLost = (event: Event) => {
@@ -839,7 +1147,7 @@ export function BgGlassShapes() {
     };
 
     const handleContextRestored = () => {
-      renderer = createRenderer(canvas);
+      renderer = createRenderer(canvas, lite);
       if (!renderer) {
         setUnsupported(true);
         return;
@@ -863,7 +1171,8 @@ export function BgGlassShapes() {
     canvas.addEventListener("webglcontextrestored", handleContextRestored);
 
     resizeCanvas();
-    start();
+    if (pendingRestore) pendingRestore.restoreContext();
+    else start();
 
     return () => {
       stop();
@@ -877,8 +1186,15 @@ export function BgGlassShapes() {
       finePointerQuery.removeEventListener("change", handlePointerQueryChange);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
       canvas.removeEventListener("webglcontextrestored", handleContextRestored);
+      const gl = renderer && !renderer.gl.isContextLost() ? renderer.gl : null;
       destroyRenderer(renderer);
       renderer = null;
+      const extension = gl ? gl.getExtension("WEBGL_lose_context") : null;
+      if (extension) {
+        canvas.addEventListener("webglcontextlost", (event) => event.preventDefault(), { once: true });
+        loseExtensions.set(canvas, extension);
+        extension.loseContext();
+      }
     };
   }, []);
 
@@ -888,7 +1204,13 @@ export function BgGlassShapes() {
       className="pointer-events-none fixed inset-0 z-0"
       style={{ background: FALLBACK_BACKGROUND }}
     >
-      {!unsupported && <canvas ref={canvasRef} className="block h-full w-full" style={{ width: "100%", height: "100%" }} />}
+      {!unsupported && (
+        <canvas
+          ref={canvasRef}
+          className="block h-full w-full"
+          style={{ width: "100%", height: "100%", imageRendering: "auto" }}
+        />
+      )}
     </div>
   );
 }
